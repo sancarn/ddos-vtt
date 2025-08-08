@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { GameInterface } from './components/GameInterface';
 import { DMInterface } from './components/DMInterface';
-import { SimplePlayerInterface } from './components/SimplePlayerInterface';
+import { PlayerInterface } from './components/PlayerInterface';
 import { useGameStore } from './store/gameStore';
 import { peerManager } from './networking/peerManager';
 import './styles/App.css';
@@ -38,9 +38,9 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<SimplePlayerInterface />} />
+          <Route path="/" element={<PlayerInterface />} />
           <Route path="/dm" element={<DMInterface />} />
-          <Route path="/player" element={<SimplePlayerInterface />} />
+          <Route path="/player" element={<PlayerInterface />} />
           <Route path="/complex" element={<GameInterface />} />
         </Routes>
       </div>
