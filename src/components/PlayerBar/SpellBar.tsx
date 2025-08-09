@@ -27,10 +27,10 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize grid slots
+  // Initialize grid slots - 9 rows, 16 columns
   useEffect(() => {
-    const gridWidth = 8;
-    const gridHeight = 2;
+    const gridWidth = 16;
+    const gridHeight = 9;
     const newSlots: SpellSlot[] = [];
 
     for (let y = 0; y < gridHeight; y++) {
@@ -129,166 +129,64 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
 
   return (
     <div 
-      className={`spell-bar ${className}`}
-      style={{
-        background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-        border: '2px solid #d4af37',
-        borderRadius: '12px',
-        padding: '16px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-      }}
+      className={`spell-bar bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-game-gold rounded-xl p-4 shadow-2xl relative ${className}`}
     >
+      {/* Stone texture overlay for the entire bar */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none rounded-xl"
+        style={{
+          backgroundImage: 'url(/assets/Overlay_SpellBar.png)'
+        }}
+      />
+      
       {/* Spell Bar Grid */}
       <div 
-        className="spell-bar-container" 
+        className={`spell-bar-container overflow-x-auto overflow-y-auto py-2 relative z-10 max-h-[90px]`}
         ref={containerRef}
-        style={{
-          overflowX: 'auto',
-          padding: '8px 0'
-        }}
       >
         <div 
-          className="spell-bar-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(8, 1fr)',
-            gridTemplateRows: 'repeat(2, 1fr)',
-            gap: '8px',
-            minWidth: '800px'
-          }}
+          className="spell-bar-grid grid grid-cols-16 grid-rows-9 gap-1 w-max"
         >
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className={`spell-slot ${slot.spell ? 'has-spell' : ''} ${
-                dragOverSlot === slot.id ? 'drag-over' : ''
+              className={`spell-slot relative w-16 h-16 bg-transparent rounded border border-gray-600 cursor-pointer transition-all duration-200 overflow-hidden flex-shrink-0 ${
+                slot.spell ? 'border-green-500 shadow-lg shadow-green-500/30' : ''
+              } ${
+                dragOverSlot === slot.id ? 'border-game-gold scale-105 shadow-lg shadow-game-gold/30' : ''
               }`}
               onDragOver={(e) => handleDragOver(e, slot.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, slot.id)}
               onClick={() => handleSlotClick(slot)}
-              style={{
-                position: 'relative',
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                border: slot.spell ? '2px solid #10b981' : '2px solid #4b5563',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                overflow: 'hidden',
-                boxShadow: slot.spell ? '0 0 8px rgba(16, 185, 129, 0.3)' : 'none'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#d4af37';
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(212, 175, 55, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = slot.spell ? '#10b981' : '#4b5563';
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = slot.spell ? '0 0 8px rgba(16, 185, 129, 0.3)' : 'none';
-              }}
             >
-              {/* Stone texture overlay */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'url(/assets/Overlay_SpellBar.png) center/cover',
-                  opacity: 0.3,
-                  pointerEvents: 'none'
-                }}
-              />
-              
               {slot.spell ? (
                 <div 
-                  className="spell-in-slot"
+                  className="spell-in-slot relative flex items-center justify-center h-full w-full cursor-grab"
                   draggable
                   onDragStart={(e) => handleDragStart(e, slot.spell!)}
-                  style={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    padding: '8px',
-                    cursor: 'grab'
-                  }}
                 >
                   <img 
                     src={slot.spell.icon} 
                     alt={slot.spell.name}
-                    className="spell-icon"
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      objectFit: 'contain',
-                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))'
-                    }}
+                    className="spell-icon w-full h-full object-contain drop-shadow-lg"
                   />
                   {slot.spell.currentCooldown && slot.spell.currentCooldown > 0 && (
                     <div 
-                      className="cooldown-overlay"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '6px'
-                      }}
+                      className="cooldown-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded"
                     >
                       <span 
-                        className="cooldown-text"
-                        style={{
-                          color: '#ef4444',
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
-                        }}
+                        className="cooldown-text text-red-500 text-sm font-bold drop-shadow-lg"
                       >
                         {slot.spell.currentCooldown}
                       </span>
                     </div>
                   )}
                   <button
-                    className="remove-spell-btn"
+                    className="remove-spell-btn absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/80 border-none rounded-full text-white text-xs font-bold cursor-pointer flex items-center justify-center opacity-0 transition-opacity duration-200 hover:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       removeSpellFromSlot(slot.id);
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      right: '2px',
-                      width: '16px',
-                      height: '16px',
-                      background: 'rgba(239, 68, 68, 0.8)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      color: 'white',
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: 0,
-                      transition: 'opacity 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '0';
                     }}
                   >
                     ×
@@ -296,19 +194,9 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
                 </div>
               ) : (
                 <div 
-                  className="empty-slot"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    color: '#6b7280',
-                    fontSize: '10px',
-                    textAlign: 'center',
-                    opacity: 0.5
-                  }}
+                  className="empty-slot flex w-full items-center justify-center h-full text-gray-400 text-xs text-center opacity-50"
                 >
-                  <span className="slot-hint">Drop spell here</span>
+                  {/* <span className="slot-hint"></span> */}
                 </div>
               )}
             </div>

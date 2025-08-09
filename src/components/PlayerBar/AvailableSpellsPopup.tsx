@@ -77,8 +77,6 @@ export const AvailableSpellsPopup: React.FC<AvailableSpellsPopupProps> = ({
     <div
       className="fixed z-50"
       style={{
-        position: 'fixed',
-        zIndex: 50,
         left: `${position.x}px`,
         top: `${position.y}px`,
         transform: 'translate(-50%, -100%)',
@@ -86,61 +84,23 @@ export const AvailableSpellsPopup: React.FC<AvailableSpellsPopupProps> = ({
       }}
     >
       <div
-        className="available-spells-popup"
+        className="available-spells-popup bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-game-gold rounded-xl p-4 shadow-2xl min-w-[300px] max-w-[400px]"
         style={{
-          background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-          border: '2px solid #d4af37',
-          borderRadius: '12px',
-          padding: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-          minWidth: '300px',
-          maxWidth: '400px'
+          background: 'linear-gradient(to bottom right, #1f2937, #111827)'
         }}
       >
         {/* Header */}
         <div
-          className="popup-header"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-            paddingBottom: '12px',
-            borderBottom: '1px solid #374151'
-          }}
+          className="popup-header flex justify-between items-center mb-4 pb-3 border-b border-gray-700"
         >
           <h3
-            className="popup-title"
-            style={{
-              color: '#d4af37',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              margin: 0
-            }}
+            className="popup-title text-game-gold text-lg font-bold m-0"
           >
             Available Spells
           </h3>
           <button
             onClick={onClose}
-            className="close-button"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#9ca3af',
-              fontSize: '20px',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#d4af37';
-              e.currentTarget.style.backgroundColor = 'rgba(212, 175, 55, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#9ca3af';
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
+            className="close-button bg-none border-none text-gray-400 text-xl cursor-pointer p-1 rounded transition-all duration-200 hover:text-game-gold hover:bg-game-gold/10"
           >
             ×
           </button>
@@ -148,106 +108,52 @@ export const AvailableSpellsPopup: React.FC<AvailableSpellsPopupProps> = ({
 
         {/* Spells Grid */}
         <div
-          className="spells-grid"
+          className="spells-grid grid gap-4 max-h-[400px] overflow-y-auto"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: '12px',
-            maxHeight: '400px',
-            overflowY: 'auto'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))'
           }}
         >
           {availableSpells.map((spell) => (
-                         <div
-               key={spell.id}
-               className="spell-item"
-               draggable
-               onDragStart={(e) => {
-                 e.dataTransfer.effectAllowed = 'move';
-                 e.dataTransfer.setData('text/plain', spell.id);
-                 e.dataTransfer.setData('application/json', JSON.stringify(spell));
-               }}
-               onClick={() => onSpellSelect(spell)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                border: '1px solid #4b5563',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-                overflow: 'hidden'
+            <div
+              key={spell.id}
+              className="spell-item flex flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded-lg cursor-pointer transition-all duration-200 relative overflow-hidden hover:border-game-gold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-game-gold/20 min-h-[120px]"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', spell.id);
+                e.dataTransfer.setData('application/json', JSON.stringify(spell));
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#d4af37';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(212, 175, 55, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#4b5563';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              onClick={() => onSpellSelect(spell)}
             >
               {/* Stone texture overlay */}
               <div
+                className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'url(/assets/Overlay_SpellBar.png) center/cover',
-                  opacity: 0.2,
-                  pointerEvents: 'none'
+                  backgroundImage: 'url(/assets/Overlay_SpellBar.png)'
                 }}
               />
-              
+
               <img
                 src={spell.icon}
                 alt={spell.name}
-                className="spell-icon"
+                className="spell-icon w-16 h-16 object-contain drop-shadow-lg relative z-10 mb-2"
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-                  position: 'relative',
-                  zIndex: 1
+                  width: '64px',
+                  height: '64px',
+                  maxWidth: '64px',
+                  maxHeight: '64px'
                 }}
               />
               <div
-                className="spell-info"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  flex: 1,
-                  position: 'relative',
-                  zIndex: 1
-                }}
+                className="spell-info flex flex-col items-center gap-1 relative z-10 text-center"
               >
                 <span
-                  className="spell-name"
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#e5e7eb'
-                  }}
+                  className="spell-name text-sm font-semibold text-gray-200"
                 >
                   {spell.name}
                 </span>
                 <div
-                  className="spell-details"
-                  style={{
-                    display: 'flex',
-                    gap: '8px',
-                    fontSize: '12px',
-                    color: '#9ca3af'
-                  }}
+                  className="spell-details flex gap-2 text-xs text-gray-400"
                 >
                   {spell.level && (
                     <span className="spell-level">
@@ -267,18 +173,7 @@ export const AvailableSpellsPopup: React.FC<AvailableSpellsPopupProps> = ({
 
         {/* Arrow pointing to portrait */}
         <div
-          className="popup-arrow"
-          style={{
-            position: 'absolute',
-            bottom: '-8px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0,
-            height: 0,
-            borderLeft: '8px solid transparent',
-            borderRight: '8px solid transparent',
-            borderTop: '8px solid #d4af37'
-          }}
+          className="popup-arrow absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-game-gold"
         />
       </div>
     </div>

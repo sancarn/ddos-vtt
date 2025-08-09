@@ -1072,7 +1072,7 @@ body {
 }
 
 .status-item {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  background: linear-gradient(135deg, #5e5e5e 0%, #424242 100%);
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
