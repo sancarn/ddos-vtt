@@ -1,0 +1,15 @@
+<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="wildshapeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#16A34A" stop-opacity="1"/>
+      <stop offset="70%" stop-color="#15803D" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#166534" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <!-- Leaf shape -->
+  <path d="M12,2 Q16,4 18,8 Q20,12 18,16 Q16,20 12,22 Q8,20 6,16 Q4,12 6,8 Q8,4 12,2 Z" fill="url(#wildshapeGlow)" stroke="#14532D" stroke-width="1"/>
+  <!-- Leaf vein -->
+  <path d="M12,4 L12,20" stroke="#22C55E" stroke-width="1" opacity="0.6"/>
+  <path d="M8,8 Q12,10 16,8" stroke="#22C55E" stroke-width="0.5" opacity="0.6"/>
+  <path d="M8,16 Q12,18 16,16" stroke="#22C55E" stroke-width="0.5" opacity="0.6"/>
+</svg>

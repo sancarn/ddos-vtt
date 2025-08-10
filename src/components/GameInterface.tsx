@@ -19,9 +19,9 @@ export const GameInterface: React.FC = () => {
 
   if (!currentMap) {
     return (
-      <div className="game-interface">
-        <div className="no-map-message">
-          <h2>No Map Loaded</h2>
+      <div className="flex flex-col h-screen bg-gradient-to-br from-game-dark to-game-darker">
+        <div className="flex flex-col items-center justify-center h-screen text-center text-gray-400">
+          <h2 className="text-2xl text-gray-300 mb-4">No Map Loaded</h2>
           <p>Please load a map to begin the game.</p>
         </div>
       </div>
@@ -33,44 +33,49 @@ export const GameInterface: React.FC = () => {
     : null;
 
   return (
-    <div className="game-interface">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-game-dark to-game-darker">
       {/* Top toolbar */}
-      <div className="top-toolbar">
-        <div className="toolbar-left">
-          <h1>D&D OS VTT</h1>
+      <div className="flex justify-between items-center px-5 py-3 bg-gradient-to-r from-game-gray to-game-dark border-b-2 border-gray-700 shadow-lg">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-game-yellow to-game-orange bg-clip-text text-transparent">
+            D&D OS VTT
+          </h1>
         </div>
-        <div className="toolbar-center">
+        <div className="flex items-center gap-5">
           {gameState.phase === 'combat' && (
-            <div className="combat-info">
-              <span className="turn-indicator">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-sm text-game-yellow font-bold">
                 Turn: {gameState.currentTurn + 1} / {gameState.initiativeOrder.length}
               </span>
               {currentCharacter && (
-                <span className="current-character">
+                <span className="text-xs text-gray-300">
                   {currentCharacter.name}'s turn
                 </span>
               )}
             </div>
           )}
         </div>
-        <div className="toolbar-right">
+        <div className="flex gap-3 items-center">
           <button 
-            className="btn btn-primary"
+            className="px-4 py-2 bg-gradient-to-r from-game-yellow to-game-orange text-black rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-game-orange hover:to-game-yellow hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-300/30"
             onClick={gameState.phase === 'combat' ? endCombat : startCombat}
           >
             <Sword size={16} />
             {gameState.phase === 'combat' ? 'End Combat' : 'Start Combat'}
           </button>
           {gameState.phase === 'combat' && (
-            <button className="btn btn-secondary" onClick={nextTurn}>
+            <button 
+              className="px-4 py-2 bg-gradient-to-r from-game-blue to-blue-600 text-white rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-blue-600 hover:to-game-blue hover:-translate-y-0.5"
+              onClick={nextTurn}
+            >
               Next Turn
             </button>
           )}
-          <button className="btn btn-outline">
+          <button className="px-4 py-2 bg-transparent text-gray-300 border border-gray-600 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:bg-gray-700 hover:text-white">
             <Users size={16} />
             Players
           </button>
-          <button className="btn btn-outline">
+          <button className="px-4 py-2 bg-transparent text-gray-300 border border-gray-600 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:bg-gray-700 hover:text-white">
             <Settings size={16} />
             Settings
           </button>
@@ -78,21 +83,21 @@ export const GameInterface: React.FC = () => {
       </div>
 
       {/* Main game area */}
-      <div className="game-main">
+      <div className="flex flex-1 gap-0 overflow-hidden">
         {/* Left sidebar - Character sheet */}
-        <div className="left-sidebar">
+        <div className="w-80 bg-gradient-to-b from-game-gray to-game-dark border-r-2 border-gray-700 overflow-y-auto p-5">
           {selectedCharacter ? (
             <CharacterSheet character={selectedCharacter} />
           ) : (
-            <div className="no-character-selected">
-              <h3>No Character Selected</h3>
+            <div className="text-center py-10 px-5 text-gray-400">
+              <h3 className="text-gray-300 mb-2">No Character Selected</h3>
               <p>Click on a character token to view their sheet.</p>
             </div>
           )}
         </div>
 
         {/* Center - Map */}
-        <div className="map-container">
+        <div className="flex-1 flex justify-center items-center p-5 bg-game-darker">
           <MapRenderer 
             map={currentMap}
             width={800}
@@ -101,12 +106,12 @@ export const GameInterface: React.FC = () => {
         </div>
 
         {/* Right sidebar - Inventory */}
-        <div className="right-sidebar">
+        <div className="w-80 bg-gradient-to-b from-game-gray to-game-dark border-l-2 border-gray-700 overflow-y-auto p-5">
           {selectedCharacter ? (
             <Inventory character={selectedCharacter} />
           ) : (
-            <div className="no-character-selected">
-              <h3>Inventory</h3>
+            <div className="text-center py-10 px-5 text-gray-400">
+              <h3 className="text-gray-300 mb-2">Inventory</h3>
               <p>Select a character to view their inventory.</p>
             </div>
           )}
@@ -114,13 +119,13 @@ export const GameInterface: React.FC = () => {
       </div>
 
       {/* Bottom status bar */}
-      <div className="bottom-status">
-        <div className="status-left">
+      <div className="flex justify-between items-center px-5 py-2 bg-gradient-to-r from-game-gray to-game-dark border-t-2 border-gray-700 text-xs text-gray-400">
+        <div className="flex gap-4 items-center">
           <span>Phase: {gameState.phase}</span>
           <span>Characters: {characters.length}</span>
-          {isDM && <span className="dm-badge">DM Mode</span>}
+          {isDM && <span className="bg-game-yellow text-black px-1.5 py-0.5 rounded text-xs font-bold">DM Mode</span>}
         </div>
-        <div className="status-right">
+        <div className="flex gap-4 items-center">
           <span>Map: {currentMap.name}</span>
         </div>
       </div>

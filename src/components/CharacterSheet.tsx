@@ -43,17 +43,17 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => 
   };
 
   return (
-    <div className="character-sheet">
+    <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="character-header">
+      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg border border-gray-600">
         <img 
           src={character.portrait} 
           alt={character.name}
-          className="character-portrait"
+          className="w-16 h-16 rounded-full border-2 border-game-yellow"
         />
-        <div className="character-info">
-          <h3>{character.name}</h3>
-          <div className="health-bar">
+        <div>
+          <h3 className="text-lg mb-1 text-game-yellow">{character.name}</h3>
+          <div className="flex items-center gap-1.5 text-game-red font-bold">
             <Heart size={16} />
             <span>{character.health.current}/{character.health.max}</span>
           </div>
@@ -61,35 +61,41 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => 
       </div>
 
       {/* Check and Save buttons */}
-      <div className="action-buttons">
-        <button className="btn btn-primary">Check</button>
-        <button className="btn btn-secondary">Save</button>
+      <div className="flex gap-2">
+        <button className="px-4 py-2 bg-gradient-to-r from-game-yellow to-game-orange text-black rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-game-orange hover:to-game-yellow hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-300/30">
+          Check
+        </button>
+        <button className="px-4 py-2 bg-gradient-to-r from-game-blue to-blue-600 text-white rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-blue-600 hover:to-game-blue hover:-translate-y-0.5">
+          Save
+        </button>
       </div>
 
       {/* Attributes */}
-      <div className="attributes-section">
-        <h4>Attributes</h4>
-        <div className="attributes-grid">
+      <div>
+        <h4 className="text-game-yellow text-base mb-3 border-b border-gray-600 pb-1">Attributes</h4>
+        <div className="grid grid-cols-2 gap-3">
           {attributes.map(({ key, name, icon }) => (
-            <div key={key} className="attribute-item">
-              <div className="attribute-header">
-                <span className="attribute-icon">{icon}</span>
-                <span className="attribute-name">{name}</span>
+            <div key={key} className="bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">{icon}</span>
+                <span className="font-bold text-gray-300">{name}</span>
               </div>
-              <div className="attribute-value">
-                <span className="value">{character.attributes[key as keyof Character['attributes']]}</span>
-                <span className="modifier">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg font-bold text-game-yellow">{character.attributes[key as keyof Character['attributes']]}</span>
+                <span className="text-sm text-gray-400">
                   ({getModifier(character.attributes[key as keyof Character['attributes']])})
                 </span>
               </div>
-              <div className="attribute-actions">
+              <div className="flex gap-1">
                 <button 
-                  className="btn btn-small"
+                  className="px-2 py-1 bg-gradient-to-r from-game-yellow to-game-orange text-black rounded text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-game-orange hover:to-game-yellow hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-300/30"
                   onClick={() => handleAttributeRoll(key as keyof Character['attributes'])}
                 >
                   Roll
                 </button>
-                <button className="btn btn-small">Check</button>
+                <button className="px-2 py-1 bg-gradient-to-r from-game-yellow to-game-orange text-black rounded text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-game-orange hover:to-game-yellow hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-300/30">
+                  Check
+                </button>
               </div>
             </div>
           ))}
@@ -97,20 +103,20 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => 
       </div>
 
       {/* Skills */}
-      <div className="skills-section">
-        <h4>Skills</h4>
-        <div className="skills-list">
+      <div>
+        <h4 className="text-game-yellow text-base mb-3 border-b border-gray-600 pb-1">Skills</h4>
+        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
           {character.skills.map((skill) => (
-            <div key={skill.id} className="skill-item">
-              <div className="skill-info">
-                <span className="skill-icon">{skill.icon}</span>
-                <span className="skill-name">{skill.name}</span>
+            <div key={skill.id} className="flex justify-between items-center p-3 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{skill.icon}</span>
+                <span className="text-xs text-gray-300">{skill.name}</span>
               </div>
-              <div className="skill-modifier">
+              <div className="text-xs text-gray-400 font-bold">
                 {skill.modifier >= 0 ? `+${skill.modifier}` : `${skill.modifier}`}
               </div>
               <button 
-                className="btn btn-small"
+                className="px-2 py-1 bg-gradient-to-r from-game-yellow to-game-orange text-black rounded text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1.5 hover:from-game-orange hover:to-game-yellow hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-300/30"
                 onClick={() => handleSkillRoll(skill.id)}
               >
                 Roll
@@ -121,18 +127,18 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => 
       </div>
 
       {/* Status Effects */}
-      <div className="status-section">
-        <h4>Status</h4>
-        <div className="status-grid">
+      <div>
+        <h4 className="text-game-yellow text-base mb-3 border-b border-gray-600 pb-1">Status</h4>
+        <div className="grid grid-cols-3 gap-2">
           {character.statusEffects.map((effect) => (
-            <div key={effect.id} className="status-effect">
-              <img src={effect.icon} alt={effect.name} />
-              <span className="effect-name">{effect.name}</span>
+            <div key={effect.id} className="flex flex-col items-center gap-1 p-2 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded">
+              <img src={effect.icon} alt={effect.name} className="w-6 h-6" />
+              <span className="text-xs text-gray-300 text-center">{effect.name}</span>
             </div>
           ))}
           {/* Empty slots */}
           {Array.from({ length: 9 - character.statusEffects.length }).map((_, i) => (
-            <div key={`empty-${i}`} className="status-slot empty" />
+            <div key={`empty-${i}`} className="border border-dashed border-gray-600 bg-transparent min-h-10 rounded" />
           ))}
         </div>
       </div>

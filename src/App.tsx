@@ -36,7 +36,7 @@ function App() {
 
   return (
     <Router>
-      <div className="App">
+      <div className="h-screen flex flex-col">
         <Routes>
           <Route path="/" element={<PlayerInterface />} />
           <Route path="/dm" element={<DMInterface />} />

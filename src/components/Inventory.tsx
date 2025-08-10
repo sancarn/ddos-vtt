@@ -18,19 +18,21 @@ export const Inventory: React.FC<InventoryProps> = ({ character }) => {
   const renderInventorySlot = (item: InventoryItem | null, index: number) => {
     if (item) {
       return (
-        <div key={index} className="inventory-slot filled">
-          <img src={item.icon} alt={item.name} className="item-icon" />
+        <div key={index} className="aspect-square border border-gray-600 rounded flex flex-col items-center justify-center relative bg-gradient-to-br from-gray-700 to-gray-800">
+          <img src={item.icon} alt={item.name} className="w-6 h-6 mb-0.5" />
           {item.quantity > 1 && (
-            <span className="item-quantity">{item.quantity}</span>
+            <span className="absolute top-0.5 right-0.5 bg-game-yellow text-black text-xs font-bold px-1 py-0.5 rounded">
+              {item.quantity}
+            </span>
           )}
-          <span className="item-name">{item.name}</span>
+          <span className="text-xs text-gray-300 text-center max-w-full overflow-hidden text-ellipsis">{item.name}</span>
         </div>
       );
     }
     
     return (
-      <div key={index} className="inventory-slot empty">
-        <div className="slot-placeholder" />
+      <div key={index} className="aspect-square border border-dashed border-gray-600 bg-transparent rounded flex flex-col items-center justify-center">
+        <div />
       </div>
     );
   };
@@ -50,33 +52,33 @@ export const Inventory: React.FC<InventoryProps> = ({ character }) => {
   }
 
   return (
-    <div className="inventory-panel">
+    <div className="flex flex-col gap-4">
       {/* Action buttons */}
-      <div className="action-buttons-row">
+      <div className="flex gap-2 justify-center">
         {actionButtons.map((button) => (
-          <button key={button.id} className="action-button">
-            <span className="action-icon">{button.icon}</span>
-            <span className="action-label">{button.label}</span>
+          <button key={button.id} className="flex flex-col items-center gap-1 p-2 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded text-gray-300 cursor-pointer transition-all duration-200 hover:from-gray-800 hover:to-gray-700 hover:text-game-yellow">
+            <span className="text-base">{button.icon}</span>
+            <span className="text-xs">{button.label}</span>
           </button>
         ))}
       </div>
 
       {/* Inventory grid */}
-      <div className="inventory-grid">
+      <div className="grid grid-cols-6 gap-1 max-h-72 overflow-y-auto">
         {inventorySlots.map((item, index) => renderInventorySlot(item, index))}
       </div>
 
       {/* Utility buttons */}
-      <div className="utility-buttons">
-        <button className="utility-button">
+      <div className="flex flex-col gap-2">
+        <button className="flex items-center gap-2 p-3 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded text-gray-300 cursor-pointer transition-all duration-200 hover:from-gray-800 hover:to-gray-700 hover:text-game-yellow">
           <Backpack size={20} />
           <span>Inventory</span>
         </button>
-        <button className="utility-button">
+        <button className="flex items-center gap-2 p-3 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded text-gray-300 cursor-pointer transition-all duration-200 hover:from-gray-800 hover:to-gray-700 hover:text-game-yellow">
           <Copy size={20} />
           <span>Copy Identity</span>
         </button>
-        <button className="utility-button">
+        <button className="flex items-center gap-2 p-3 bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 rounded text-gray-300 cursor-pointer transition-all duration-200 hover:from-gray-800 hover:to-gray-700 hover:text-game-yellow">
           <CheckSquare size={20} />
           <span>Check</span>
         </button>

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { SpellBar } from './PlayerBar/SpellBar';
 import { AvailableSpellsPopup } from './PlayerBar/AvailableSpellsPopup';
+import { Resources, ResourceItem, ActionResource, SpellSlotResource, KiResource, SorceryPointResource, ChannelDivinityResource, WildshapeResource, BardicInspirationResource, RageResource } from './PlayerBar/Resources';
+import Skill from './SideBar/Skill';
 
 interface Blob {
   id: string;
@@ -36,6 +38,169 @@ export const PlayerInterface: React.FC = () => {
   // Current player ID (in real app, this would come from networking)
   const currentPlayerId = 'P1';
   
+  // Skills search and sort state
+  const [skillsSearchQuery, setSkillsSearchQuery] = useState('');
+  const [skillsSortOrder, setSkillsSortOrder] = useState<'attribute' | 'alphabetical'>('alphabetical');
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    skillName: string;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    skillName: ''
+  });
+  
+  // Skills data with attribute information
+  const skillsData = [
+    { name: "Athletics", icon: "/assets/skills/Athletics.svg", attribute: "Strength" },
+    { name: "Acrobatics", icon: "/assets/skills/Acrobatics.svg", attribute: "Dexterity" },
+    { name: "Sleight of Hand", icon: "/assets/skills/SleightOfHand.svg", attribute: "Dexterity" },
+    { name: "Stealth", icon: "/assets/skills/Stealth.svg", attribute: "Dexterity" },
+    { name: "Arcana", icon: "/assets/skills/Arcana.svg", attribute: "Intelligence" },
+    { name: "History", icon: "/assets/skills/History.svg", attribute: "Intelligence" },
+    { name: "Investigation", icon: "/assets/skills/Investigation.svg", attribute: "Intelligence" },
+    { name: "Nature", icon: "/assets/skills/Nature.svg", attribute: "Intelligence" },
+    { name: "Religion", icon: "/assets/skills/Religion.svg", attribute: "Intelligence" },
+    { name: "Animal Handling", icon: "/assets/skills/AnimalHandling.svg", attribute: "Wisdom" },
+    { name: "Insight", icon: "/assets/skills/Insight.svg", attribute: "Wisdom" },
+    { name: "Medicine", icon: "/assets/skills/Medicine.svg", attribute: "Wisdom" },
+    { name: "Perception", icon: "/assets/skills/Perception.svg", attribute: "Wisdom" },
+    { name: "Survival", icon: "/assets/skills/Survival.svg", attribute: "Wisdom" },
+    { name: "Deception", icon: "/assets/skills/Deception.svg", attribute: "Charisma" },
+    { name: "Intimidation", icon: "/assets/skills/Intimidation.svg", attribute: "Charisma" },
+    { name: "Performance", icon: "/assets/skills/Performance.svg", attribute: "Charisma" },
+    { name: "Persuasion", icon: "/assets/skills/Persuasion.svg", attribute: "Charisma" },
+  ];
+
+  // Filter and sort skills based on search query and sort order
+  const filteredAndSortedSkills = skillsData
+    .filter(skill => 
+      skill.name.toLowerCase().includes(skillsSearchQuery.toLowerCase()) ||
+      skill.attribute.toLowerCase().includes(skillsSearchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (skillsSortOrder === 'alphabetical') {
+        return a.name.localeCompare(b.name);
+      } else {
+        // Sort by attribute order: STR, DEX, CON, INT, WIS, CHA
+        const attributeOrder = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+        const aIndex = attributeOrder.indexOf(a.attribute);
+        const bIndex = attributeOrder.indexOf(b.attribute);
+        if (aIndex === bIndex) {
+          return a.name.localeCompare(b.name);
+        }
+        return aIndex - bIndex;
+      }
+    });
+
+  // Context menu handlers
+  const handleSkillRightClick = (e: React.MouseEvent, skillName: string) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      skillName
+    });
+  };
+
+  const handleContextMenuClose = () => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleAdvantage = (skillName: string) => {
+    console.log(`Advantage applied to ${skillName}`);
+    handleContextMenuClose();
+    // TODO: Implement advantage logic
+  };
+
+  const handleDisadvantage = (skillName: string) => {
+    console.log(`Disadvantage applied to ${skillName}`);
+    handleContextMenuClose();
+    // TODO: Implement disadvantage logic
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        handleContextMenuClose();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu.visible]);
+
+  // Mock resources data for UI design - moved from Resources component
+  const mockResources = {
+    actions: { current: 1, max: 1 },
+    bonusActions: { current: 1, max: 1 },
+    reactions: { current: 1, max: 1 },
+    spellSlots: [
+      { level: 1, available: 4, max: 4 },
+      { level: 2, available: 3, max: 3 },
+      { level: 3, available: 2, max: 2 },
+    ],
+    ki: { available: 5, max: 5 },
+    sorceryPoints: { available: 3, max: 5 },
+    channelDivinity: { available: 1, max: 1 },
+    wildshape: { available: 2, max: 2 },
+    bardicInspiration: { available: 3, max: 3 },
+    rage: { available: 2, max: 2 },
+  };
+
+  // Function to generate resources data for the Resources component
+  const getResourcesData = (): ResourceItem[] => {
+    return [
+      {
+        name: "Action",
+        element: <ActionResource type="action" current={mockResources.actions.current} max={mockResources.actions.max} onClick={() => console.log('Action clicked')} />
+      },
+      {
+        name: "Bonus",
+        element: <ActionResource type="bonusAction" current={mockResources.bonusActions.current} max={mockResources.bonusActions.max} onClick={() => console.log('Bonus Action clicked')} />
+      },
+      {
+        name: "Reaction",
+        element: <ActionResource type="reaction" current={mockResources.reactions.current} max={mockResources.reactions.max} onClick={() => console.log('Reaction clicked')} />
+      },
+      ...mockResources.spellSlots.map((slot) => ({
+        name: `L${slot.level}`,
+        element: <SpellSlotResource level={slot.level} available={slot.available} max={slot.max} onClick={() => console.log(`Spell slot ${slot.level} clicked`)} />
+      })),
+      // {
+      //   name: "Ki",
+      //   element: <KiResource available={mockResources.ki.available} max={mockResources.ki.max} onClick={() => console.log('Ki clicked')} />
+      // },
+      // {
+      //   name: "SP",
+      //   element: <SorceryPointResource available={mockResources.sorceryPoints.available} max={mockResources.sorceryPoints.max} onClick={() => console.log('Sorcery Point clicked')} />
+      // },
+      // {
+      //   name: "CD",
+      //   element: <ChannelDivinityResource available={mockResources.channelDivinity.available} max={mockResources.channelDivinity.max} onClick={() => console.log('Channel Divinity clicked')} />
+      // },
+      // {
+      //   name: "WS",
+      //   element: <WildshapeResource available={mockResources.wildshape.available} max={mockResources.wildshape.max} onClick={() => console.log('Wildshape clicked')} />
+      // },
+      // {
+      //   name: "BI",
+      //   element: <BardicInspirationResource available={mockResources.bardicInspiration.available} max={mockResources.bardicInspiration.max} onClick={() => console.log('Bardic Inspiration clicked')} />
+      // },
+      // {
+      //   name: "Rage",
+      //   element: <RageResource available={mockResources.rage.available} max={mockResources.rage.max} onClick={() => console.log('Rage clicked')} />
+      // }
+    ];
+  };
+
   const [blobs, setBlobs] = useState<Blob[]>([
     // P1's tokens (you control these)
     { id: 'player1', x: 100, y: 100, isPlayer: true, health: 20, maxHealth: 20, color: '#4CAF50', speed: 6, controller: 'P1', name: 'Fighter' },
@@ -273,107 +438,221 @@ export const PlayerInterface: React.FC = () => {
   const enemyBlobs = blobs.filter(b => b.controller === 'DM');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-game-dark to-game-darker text-white">
-      {/* Game Header */}
-      <div className="bg-game-gray border-b-2 border-game-gold p-4 flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-game-gold">Simple VTT - Player View (P1)</h2>
+    <div className="h-screen bg-game-dark text-white flex">
+
+      
+
+      {/* Skills Sidebar */}
+      <div className="flex flex-col gap-2 w-fit p-4 border-r border-game-gold">
+        {/* General checks and saves*/}{/* General checks and saves */}
+        <div className="flex flex-col gap-2 w-full p-4">
+          {/* Header */}
+          <div className="flex gap-8 mb-2 w-full justify-center items-center">
+            <span className="flex-1 text-game-gold font-bold text-sm flex justify-center items-center">CHECKS</span>
+            <span className="flex-1 text-game-gold font-bold text-sm flex justify-center items-center">SAVES</span>
+          </div>
+          
+          {/* Checks and Saves Grid */}
+          <div className="flex gap-8">
+            {/* Checks Column */}
+            <div className="flex flex-1  flex-col gap-2">
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                STR
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                DEX
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                CON
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                INT
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                WIS
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                CHA
+              </button>
+            </div>
+            
+            {/* Saves Column */}
+            <div className="flex flex-1  flex-col gap-2">
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                STR
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                DEX
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                CON
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                INT
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                WIS
+              </button>
+              <button className="px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm hover:bg-[#2d2926] hover:border-[#5a4f42] transition-colors">
+                CHA
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Skills */}
+        <h2 className="text-game-gold font-bold text-sm flex justify-center items-center">SKILLS</h2>
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 bg-green-600 rounded">My Tokens: {myBlobs.length}</span>
-            <span className="px-2 py-1 bg-blue-600 rounded">Other Players: {otherPlayerBlobs.length}</span>
-            <span className="px-2 py-1 bg-red-600 rounded">Enemies: {enemyBlobs.length}</span>
+        {/* Search and Sort Controls */}
+        <div className="flex flex-col gap-2 w-full p-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search skills..."
+              value={skillsSearchQuery}
+              onChange={(e) => setSkillsSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 bg-[#262420] border border-[#473D31] rounded text-[#A08A6E] text-sm placeholder-[#6B5B4A] focus:outline-none focus:border-[#5a4f42] focus:bg-[#2d2926] transition-colors"
+            />
+            {skillsSearchQuery && (
+              <button
+                onClick={() => setSkillsSearchQuery('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#6B5B4A] hover:text-[#A08A6E] transition-colors"
+              >
+                ✕
+              </button>
+            )}
           </div>
           
+          {/* Sort Controls */}
           <div className="flex gap-2">
-            <button 
-              onClick={damagePlayer} 
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition-colors"
+            <button
+              onClick={() => setSkillsSortOrder('attribute')}
+              className={`px-3 py-1 text-xs rounded transition-colors ${
+                skillsSortOrder === 'attribute'
+                  ? 'bg-[#5a4f42] text-[#A08A6E] border border-[#A08A6E]'
+                  : 'bg-[#262420] text-[#6B5B4A] border border-[#473D31] hover:bg-[#2d2926] hover:border-[#5a4f42]'
+              }`}
             >
-              Damage My Tokens (-5)
+              By Attribute
             </button>
-            <button 
-              onClick={healPlayer} 
-              className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition-colors"
+            <button
+              onClick={() => setSkillsSortOrder('alphabetical')}
+              className={`px-3 py-1 text-xs rounded transition-colors ${
+                skillsSortOrder === 'alphabetical'
+                  ? 'bg-[#5a4f42] text-[#A08A6E] border border-[#A08A6E]'
+                  : 'bg-[#262420] text-[#6B5B4A] border border-[#473D31] hover:bg-[#2d2926] hover:border-[#5a4f42]'
+              }`}
             >
-              Heal My Tokens (+5)
-            </button>
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setShowHelpModal(true)} 
-              className="w-10 h-10 rounded-full border border-game-gold text-game-gold hover:bg-game-gold hover:text-black transition-colors flex items-center justify-center text-xl"
-              title="Help"
-            >
-              ❓
-            </button>
-            <button 
-              onClick={() => setShowDebugInfo(!showDebugInfo)} 
-              className="w-10 h-10 rounded-full border border-game-gold text-game-gold hover:bg-game-gold hover:text-black transition-colors flex items-center justify-center text-xl"
-              title="Toggle Debug Info"
-            >
-              🐛
+              A-Z
             </button>
           </div>
         </div>
+        
+        {/* Skills List */}
+        <div className="flex flex-col gap-2 w-full p-4 overflow-y-auto max-h-96">
+          {filteredAndSortedSkills.length > 0 ? (
+            filteredAndSortedSkills.map((skill, index) => (
+              <div key={skill.name} className="flex flex-col gap-1">
+                {skillsSortOrder === 'attribute' && (index === 0 || filteredAndSortedSkills[index - 1].attribute !== skill.attribute) && (
+                  <div className="text-[#6B5B4A] text-xs font-medium px-2 py-1 bg-[#1a1816] rounded border-l-2 border-[#473D31]">
+                    {skill.attribute}
+                  </div>
+                )}
+                <Skill 
+                  name={skill.name} 
+                  icon={skill.icon} 
+                  onClick={() => console.log(`${skill.name} clicked`)}
+                  onContextMenu={(e) => handleSkillRightClick(e, skill.name)}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-[#6B5B4A] text-sm py-4">
+              No skills found matching "{skillsSearchQuery}"
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Game Area */}
-      <div className="max-w-7xl mx-auto p-4">
+      
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Game Header */}
+        <div className="bg-game-gray border-b-2 border-game-gold p-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-game-gold">Simple VTT - Player View (P1)</h2>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="px-2 py-1 bg-green-600 rounded">My Tokens: {myBlobs.length}</span>
+              <span className="px-2 py-1 bg-blue-600 rounded">Other Players: {otherPlayerBlobs.length}</span>
+              <span className="px-2 py-1 bg-red-600 rounded">Enemies: {enemyBlobs.length}</span>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={damagePlayer} 
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition-colors"
+              >
+                Damage My Tokens (-5)
+              </button>
+              <button 
+                onClick={healPlayer} 
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition-colors"
+              >
+                Heal My Tokens (+5)
+              </button>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowHelpModal(true)} 
+                className="w-10 h-10 rounded-full border border-game-gold text-game-gold hover:bg-game-gold hover:text-black transition-colors flex items-center justify-center text-xl"
+                title="Help"
+              >
+                ❓
+              </button>
+              <button 
+                onClick={() => setShowDebugInfo(!showDebugInfo)} 
+                className="w-10 h-10 rounded-full border border-game-gold text-game-gold hover:bg-game-gold hover:text-black transition-colors flex items-center justify-center text-xl"
+                title="Toggle Debug Info"
+              >
+                🐛
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Game Area */}
+        <div className="flex-1 flex gap-4 p-4 max-w-7xl mx-auto">
         <div 
-          className="relative w-[1200px] h-[600px] bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-game-gold rounded-lg overflow-hidden cursor-crosshair"
-          style={{
-            position: 'relative',
-            width: '1200px',
-            height: '600px',
-            background: 'linear-gradient(to bottom right, #374151, #111827)',
-            border: '2px solid #d4af37',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            cursor: 'crosshair'
-          }}
+          className="w-[1200px] h-[600px] bg-game-gray border-2 border-gray-700 rounded-lg relative overflow-hidden flex-shrink-0"
           ref={battlefieldRef}
           onMouseMove={handleMouseMove}
           onContextMenu={handleRightClick}
         >
           {/* Grid overlay */}
-          <div className="absolute inset-0 pointer-events-none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <div className="absolute inset-0 pointer-events-none">
             {Array.from({ length: GRID_WIDTH + 1 }, (_, x) => (
               <div
                 key={`v-${x}`}
                 className="absolute top-0 bottom-0 w-px bg-game-gold opacity-30"
-                style={{ 
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  width: '1px',
-                  backgroundColor: '#d4af37',
-                  opacity: 0.3,
-                  left: `${x * GRID_SIZE}px` 
-                }}
+                style={{ left: `${x * GRID_SIZE}px` }}
               />
             ))}
             {Array.from({ length: GRID_HEIGHT + 1 }, (_, y) => (
               <div
                 key={`h-${y}`}
                 className="absolute left-0 right-0 h-px bg-game-gold opacity-30"
-                style={{ 
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  height: '1px',
-                  backgroundColor: '#d4af37',
-                  opacity: 0.3,
-                  top: `${y * GRID_SIZE}px` 
-                }}
+                style={{ top: `${y * GRID_SIZE}px` }}
               />
             ))}
           </div>
 
           {/* Hover path */}
           {hoverPath.length > 0 && selectedBlobData && canControlBlob(selectedBlobData) && (
-            <div className="absolute inset-0 pointer-events-none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <div className="absolute inset-0 pointer-events-none">
               {hoverPath.map((pos, index) => {
                 const pixelPos = gridToPixel(pos.x, pos.y);
                 return (
@@ -381,12 +660,6 @@ export const PlayerInterface: React.FC = () => {
                     key={`path-${index}`}
                     className="absolute w-3 h-3 bg-yellow-400 rounded-full animate-pulse-slow"
                     style={{
-                      position: 'absolute',
-                      width: '12px',
-                      height: '12px',
-                      backgroundColor: '#fbbf24',
-                      borderRadius: '50%',
-                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                       left: `${pixelPos.x - 6}px`,
                       top: `${pixelPos.y - 6}px`,
                     }}
@@ -398,19 +671,9 @@ export const PlayerInterface: React.FC = () => {
 
           {/* Debug Info Overlay */}
           {showDebugInfo && (
-            <div className="absolute top-4 right-4 z-10" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
-              <div className="bg-black/90 border border-game-gold rounded-lg p-4 text-xs text-gray-300 max-w-xs backdrop-blur-sm"
-                   style={{
-                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                     border: '1px solid #d4af37',
-                     borderRadius: '8px',
-                     padding: '16px',
-                     fontSize: '12px',
-                     color: '#d1d5db',
-                     maxWidth: '300px',
-                     backdropFilter: 'blur(4px)'
-                   }}>
-                <h4 className="text-game-gold font-semibold mb-2" style={{ color: '#d4af37', fontWeight: 600, marginBottom: '8px' }}>Debug Information</h4>
+            <div className="absolute top-4 right-4 z-10">
+              <div className="bg-black/90 border border-game-gold rounded-lg p-4 text-xs text-gray-300 max-w-xs backdrop-blur-sm">
+                <h4 className="text-game-gold font-semibold mb-2">Debug Information</h4>
                 <p><strong>Selected:</strong> {selectedBlobData?.name || 'None'}</p>
                 <p><strong>Controller:</strong> {selectedBlobData?.controller || 'None'}</p>
                 <p><strong>Can Control:</strong> {selectedBlobData && canControlBlob(selectedBlobData) ? 'Yes' : 'No'}</p>
@@ -434,453 +697,106 @@ export const PlayerInterface: React.FC = () => {
                   : 'border-white/50'
               } ${canControlBlob(blob) ? 'hover:scale-105' : 'opacity-70'}`}
               style={{
-                position: 'absolute',
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                border: selectedBlob === blob.id ? '2px solid #fbbf24' : '2px solid rgba(255, 255, 255, 0.5)',
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
                 left: `${blob.x - 32}px`,
                 top: `${blob.y - 32}px`,
                 backgroundColor: blob.color,
-                transform: selectedBlob === blob.id ? 'scale(1.1)' : 'scale(1)',
-                boxShadow: selectedBlob === blob.id ? '0 10px 25px rgba(251, 191, 36, 0.5)' : 'none',
-                opacity: canControlBlob(blob) ? 1 : 0.7
               }}
               onClick={() => setSelectedBlob(blob.id)}
             >
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                   style={{
-                     position: 'absolute',
-                     top: '-8px',
-                     right: '-8px',
-                     width: '24px',
-                     height: '24px',
-                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                     borderRadius: '50%',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '12px',
-                     fontWeight: 'bold',
-                     color: 'white'
-                   }}>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center text-xs font-bold text-white">
                 {blob.name.charAt(0)}
               </div>
-              <div className="absolute -bottom-2 -left-2 px-1 py-0.5 bg-black/80 rounded text-xs font-bold text-white"
-                   style={{
-                     position: 'absolute',
-                     bottom: '-8px',
-                     left: '-8px',
-                     padding: '2px 4px',
-                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                     borderRadius: '4px',
-                     fontSize: '12px',
-                     fontWeight: 'bold',
-                     color: 'white'
-                   }}>
+              <div className="absolute -bottom-2 -left-2 px-1 py-0.5 bg-black/80 rounded text-xs font-bold text-white">
                 {blob.controller}
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 rounded-b-full overflow-hidden"
-                   style={{
-                     position: 'absolute',
-                     bottom: 0,
-                     left: 0,
-                     right: 0,
-                     height: '4px',
-                     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                     borderBottomLeftRadius: '32px',
-                     borderBottomRightRadius: '32px',
-                     overflow: 'hidden'
-                   }}>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 rounded-b-full overflow-hidden">
                 <div 
                   className="h-full bg-green-500 transition-all duration-300"
-                  style={{ 
-                    height: '100%',
-                    backgroundColor: '#10b981',
-                    transition: 'all 0.3s ease',
-                    width: `${(blob.health / blob.maxHealth) * 100}%` 
-                  }}
+                  style={{ width: `${(blob.health / blob.maxHealth) * 100}%` }}
                 />
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Help Modal */}
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" 
-             style={{
-               position: 'fixed',
-               inset: 0,
-               backgroundColor: 'rgba(0, 0, 0, 0.8)',
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               zIndex: 50
-             }}
-             onClick={() => setShowHelpModal(false)}>
-          <div className="bg-gradient-to-br from-game-gray to-game-dark border-2 border-game-gold rounded-lg w-[500px] max-w-[90vw] max-h-[80vh] overflow-y-auto shadow-2xl" 
-               style={{
-                 background: 'linear-gradient(to bottom right, #2a2a2a, #1a1a1a)',
-                 border: '2px solid #d4af37',
-                 borderRadius: '8px',
-                 width: '500px',
-                 maxWidth: '90vw',
-                 maxHeight: '80vh',
-                 overflowY: 'auto',
-                 boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
-               }}
-               onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-game-light-gray"
-                 style={{
-                   display: 'flex',
-                   justifyContent: 'space-between',
-                   alignItems: 'center',
-                   padding: '16px',
-                   borderBottom: '1px solid #444'
-                 }}>
-              <h3 className="text-xl font-bold text-game-gold" 
-                  style={{ 
-                    fontSize: '20px', 
-                    fontWeight: 'bold', 
-                    color: '#d4af37',
-                    margin: 0
-                  }}>
-                How to Play
-              </h3>
-              <button 
-                onClick={() => setShowHelpModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-game-light-gray transition-colors flex items-center justify-center text-2xl text-gray-400 hover:text-white"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: '#9ca3af',
-                  fontSize: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#444';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#9ca3af';
-                }}>
-                ×
-              </button>
-            </div>
-            <div className="p-4 text-gray-300"
-                 style={{
-                   padding: '16px',
-                   color: '#d1d5db'
-                 }}>
-              <h4 className="text-game-gold font-semibold mt-4 mb-2" 
-                  style={{ 
-                    color: '#d4af37', 
-                    fontWeight: 600, 
-                    marginTop: '16px', 
-                    marginBottom: '8px',
-                    fontSize: '16px'
-                  }}>
-                Movement Controls
-              </h4>
-              <ul className="list-disc list-inside space-y-1 mb-4"
-                  style={{
-                    listStyleType: 'disc',
-                    listStylePosition: 'inside',
-                    margin: '0 0 16px 0',
-                    paddingLeft: '0'
-                  }}>
-                <li style={{ margin: '4px 0' }}>Click on your tokens (green ones) to select them</li>
-                <li style={{ margin: '4px 0' }}>Hover your mouse to see the path</li>
-                <li style={{ margin: '4px 0' }}>Right-click to move to that location</li>
-                <li style={{ margin: '4px 0' }}>You can only control tokens assigned to P1</li>
-                <li style={{ margin: '4px 0' }}>Movement follows the grid and respects speed</li>
-              </ul>
-              
-              <h4 className="text-game-gold font-semibold mt-4 mb-2" 
-                  style={{ 
-                    color: '#d4af37', 
-                    fontWeight: 600, 
-                    marginTop: '16px', 
-                    marginBottom: '8px',
-                    fontSize: '16px'
-                  }}>
-                Token Types
-              </h4>
-              <ul className="list-disc list-inside space-y-1 mb-4"
-                  style={{
-                    listStyleType: 'disc',
-                    listStylePosition: 'inside',
-                    margin: '0 0 16px 0',
-                    paddingLeft: '0'
-                  }}>
-                <li style={{ margin: '4px 0' }}><strong>Green Tokens:</strong> Your characters (P1)</li>
-                <li style={{ margin: '4px 0' }}><strong>Blue Tokens:</strong> Other player's characters (P2)</li>
-                <li style={{ margin: '4px 0' }}><strong>Red Tokens:</strong> Enemies (DM controlled)</li>
-              </ul>
-              
-              <h4 className="text-game-gold font-semibold mt-4 mb-2" 
-                  style={{ 
-                    color: '#d4af37', 
-                    fontWeight: 600, 
-                    marginTop: '16px', 
-                    marginBottom: '8px',
-                    fontSize: '16px'
-                  }}>
-                Grid System
-              </h4>
-              <ul className="list-disc list-inside space-y-1"
-                  style={{
-                    listStyleType: 'disc',
-                    listStylePosition: 'inside',
-                    margin: '0',
-                    paddingLeft: '0'
-                  }}>
-                <li style={{ margin: '4px 0' }}>24×12 grid (1200×600 pixels)</li>
-                <li style={{ margin: '4px 0' }}>50px per grid square</li>
-                <li style={{ margin: '4px 0' }}>Diagonal movement allowed</li>
-                <li style={{ margin: '4px 0' }}>Pathfinding avoids obstacles</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Character Bar */}
-      <div className="bg-gradient-to-r from-game-gray to-game-dark border-t-2 border-game-gold p-4"
-           style={{
-             background: 'linear-gradient(to right, #2a2a2a, #1a1a1a)',
-             borderTop: '2px solid #d4af37',
-             padding: '16px'
-           }}>
-        <div className="max-w-7xl mx-auto flex items-center gap-6"
-             style={{
-               maxWidth: '1400px',
-               margin: '0 auto',
-               display: 'flex',
-               alignItems: 'center',
-               gap: '24px'
-             }}>
+      <div className="bg-gradient-to-r from-game-dark to-game-gray border-t-2 border-game-gold p-4 flex items-center gap-4 h-30 shadow-inner">
+        <div className="max-w-7xl mx-auto flex items-center gap-6 w-full">
           {/* Character Portrait */}
           <div 
             className="w-16 h-16 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full border-2 border-game-gold flex items-center justify-center text-2xl font-bold text-game-gold cursor-pointer hover:scale-105 transition-transform"
             onClick={handlePortraitClick}
-            style={{
-              width: '64px',
-              height: '64px',
-              background: 'linear-gradient(to bottom right, #4b5563, #374151)',
-              borderRadius: '50%',
-              border: '2px solid #d4af37',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: '#d4af37',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
           >
             P
           </div>
           
           {/* Status Effects */}
-          <div className="flex-1" style={{ flex: 1 }}>
-            <h4 className="text-game-gold font-semibold mb-2" 
-                style={{ color: '#d4af37', fontWeight: 600, marginBottom: '8px' }}>
+          <div className="flex-1">
+            <h4 className="text-game-gold font-semibold mb-2">
               Status Effects
             </h4>
-            <div className="flex gap-2" style={{ display: 'flex', gap: '8px' }}>
-              <span className="px-2 py-1 bg-green-600/20 border border-green-500 rounded text-green-300 text-sm"
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                      border: '1px solid #10b981',
-                      borderRadius: '4px',
-                      color: '#6ee7b7',
-                      fontSize: '14px'
-                    }}>
+            <div className="flex gap-2">
+              <span className="px-2 py-1 bg-green-600/20 border border-green-500 rounded text-green-300 text-sm">
                 Blessed
               </span>
-              <span className="px-2 py-1 bg-blue-600/20 border border-blue-500 rounded text-blue-300 text-sm"
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      border: '1px solid #3b82f6',
-                      borderRadius: '4px',
-                      color: '#93c5fd',
-                      fontSize: '14px'
-                    }}>
+              <span className="px-2 py-1 bg-blue-600/20 border border-blue-500 rounded text-blue-300 text-sm">
                 Haste
               </span>
             </div>
           </div>
           
           {/* Health and Resources */}
-          <div className="flex-1 space-y-2" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex-1 space-y-2">
             <div>
-              <h4 className="text-game-gold font-semibold mb-1" 
-                  style={{ color: '#d4af37', fontWeight: 600, marginBottom: '4px' }}>
+              <h4 className="text-game-gold font-semibold mb-1">
                 Health
               </h4>
-              <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden"
-                   style={{
-                     width: '100%',
-                     height: '16px',
-                     backgroundColor: '#374151',
-                     borderRadius: '8px',
-                     overflow: 'hidden'
-                   }}>
-                <div className="h-full bg-red-500 transition-all duration-300" 
-                     style={{ 
-                       height: '100%',
-                       backgroundColor: '#ef4444',
-                       transition: 'all 0.3s ease',
-                       width: '75%' 
-                     }}></div>
+              <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-red-500 transition-all duration-300" style={{ width: '75%' }}></div>
               </div>
             </div>
             
             <div>
-              <h4 className="text-game-gold font-semibold mb-1" 
-                  style={{ color: '#d4af37', fontWeight: 600, marginBottom: '4px' }}>
+              <h4 className="text-game-gold font-semibold mb-1">
                 Resources
               </h4>
-              <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden"
-                   style={{
-                     width: '100%',
-                     height: '16px',
-                     backgroundColor: '#374151',
-                     borderRadius: '8px',
-                     overflow: 'hidden'
-                   }}>
-                <div className="h-full bg-blue-500 transition-all duration-300" 
-                     style={{ 
-                       height: '100%',
-                       backgroundColor: '#3b82f6',
-                       transition: 'all 0.3s ease',
-                       width: '60%' 
-                     }}></div>
+              <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: '60%' }}></div>
               </div>
             </div>
           </div>
           
-          {/* Spell Slots */}
-          <div className="flex-1" style={{ flex: 1 }}>
-            <h4 className="text-game-gold font-semibold mb-2" 
-                style={{ color: '#d4af37', fontWeight: 600, marginBottom: '8px' }}>
-              Spells
-            </h4>
-            <div className="flex gap-2" style={{ display: 'flex', gap: '8px' }}>
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-sm font-bold"
-                   style={{
-                     width: '32px',
-                     height: '32px',
-                     backgroundColor: '#2563eb',
-                     borderRadius: '4px',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '14px',
-                     fontWeight: 'bold',
-                     color: 'white'
-                   }}>
-                1
+          {/* Resources and Spell Bar Container */}
+          <div className="flex-1 flex flex-col">
+            {/* Resources */}
+            <div className="flex flex-row">
+              <div className="flex-1"/>
+              <div className="flex-1">
+                <Resources data={getResourcesData} />
               </div>
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-sm font-bold"
-                   style={{
-                     width: '32px',
-                     height: '32px',
-                     backgroundColor: '#2563eb',
-                     borderRadius: '4px',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '14px',
-                     fontWeight: 'bold',
-                     color: 'white'
-                   }}>
-                2
-              </div>
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-sm font-bold"
-                   style={{
-                     width: '32px',
-                     height: '32px',
-                     backgroundColor: '#2563eb',
-                     borderRadius: '4px',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '14px',
-                     fontWeight: 'bold',
-                     color: 'white'
-                   }}>
-                3
-              </div>
-              <div className="w-8 h-8 bg-gray-700 border border-gray-600 rounded flex items-center justify-center text-sm font-bold text-gray-400"
-                   style={{
-                     width: '32px',
-                     height: '32px',
-                     backgroundColor: '#374151',
-                     border: '1px solid #4b5563',
-                     borderRadius: '4px',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '14px',
-                     fontWeight: 'bold',
-                     color: '#9ca3af'
-                   }}>
-                4
-              </div>
+              <div className="flex-1"/>
             </div>
-          </div>
-          
-          {/* Spell Bar */}
-          <div className="flex-1" style={{ flex: 1 }}>
-            <SpellBar />
+            
+            {/* Spell Bar */}
+            <div>
+              <SpellBar />
+            </div>
           </div>
           
           {/* Inventory Button */}
-          <div>
-            <button className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 border border-game-gold rounded-lg transition-all duration-200 flex items-center gap-2"
-                    style={{
-                      padding: '8px 16px',
-                      background: 'linear-gradient(to right, #374151, #1f2937)',
-                      border: '1px solid #d4af37',
-                      borderRadius: '8px',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      color: 'white'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to right, #4b5563, #374151)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to right, #374151, #1f2937)';
-                    }}>
-              <span className="text-xl" style={{ fontSize: '20px' }}>🎒</span>
-              <span className="font-semibold" style={{ fontWeight: 600 }}>Inventory</span>
+          <div className="self-end">
+            <button className="w-32 h-32 transition-all duration-200 flex items-center gap-2 group">
+              <img 
+                src="/assets/Inventory_Closed.png" 
+                alt="Inventory"
+                className="w-full h-full transition-all duration-200 group-hover:hidden"
+              />
+              <img 
+                src="/assets/Inventory_Open.png" 
+                alt="Inventory"
+                className="w-full h-full transition-all duration-200 hidden group-hover:block"
+              />
+              
             </button>
           </div>
         </div>
@@ -893,6 +809,90 @@ export const PlayerInterface: React.FC = () => {
         onSpellSelect={handleSpellSelect}
         position={spellsPopupPosition}
       />
+
+      {/* Skills Context Menu */}
+      {contextMenu.visible && (
+        <div 
+          className="fixed z-50 bg-[#1a1816] border border-[#473D31] rounded-lg shadow-2xl py-2 min-w-32"
+          style={{ 
+            left: contextMenu.x, 
+            top: contextMenu.y,
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-10px'
+          }}
+        >
+          <div className="px-3 py-1 text-xs text-[#6B5B4A] border-b border-[#473D31] mb-1">
+            {contextMenu.skillName}
+          </div>
+          <button
+            onClick={() => handleAdvantage(contextMenu.skillName)}
+            className="w-full px-3 py-2 text-left text-[#A08A6E] hover:bg-[#2d2926] transition-colors text-sm"
+          >
+            Advantage
+          </button>
+          <button
+            onClick={() => handleDisadvantage(contextMenu.skillName)}
+            className="w-full px-3 py-2 text-left text-[#A08A6E] hover:bg-[#2d2926] transition-colors text-sm"
+          >
+            Disadvantage
+          </button>
+        </div>
+      )}
+      
     </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" 
+             onClick={() => setShowHelpModal(false)}>
+          <div className="bg-gradient-to-br from-game-gray to-game-dark border-2 border-game-gold rounded-lg w-[500px] max-w-[90vw] max-h-[80vh] overflow-y-auto shadow-2xl" 
+               onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-game-light-gray">
+              <h3 className="text-xl font-bold text-game-gold">
+                How to Play
+              </h3>
+              <button 
+                onClick={() => setShowHelpModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-game-light-gray transition-colors flex items-center justify-center text-2xl text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 text-gray-300">
+              <h4 className="text-game-gold font-semibold mt-4 mb-2">
+                Movement Controls
+              </h4>
+              <ul className="list-disc list-inside space-y-1 mb-4">
+                <li>Click on your tokens (green ones) to select them</li>
+                <li>Hover your mouse to see the path</li>
+                <li>Right-click to move to that location</li>
+                <li>You can only control tokens assigned to P1</li>
+                <li>Movement follows the grid and respects speed</li>
+              </ul>
+              
+              <h4 className="text-game-gold font-semibold mt-4 mb-2">
+                Token Types
+              </h4>
+              <ul className="list-disc list-inside space-y-1 mb-4">
+                <li><strong>Green Tokens:</strong> Your characters (P1)</li>
+                <li><strong>Blue Tokens:</strong> Other player's characters (P2)</li>
+                <li><strong>Red Tokens:</strong> Enemies (DM controlled)</li>
+              </ul>
+              
+              <h4 className="text-game-gold font-semibold mt-4 mb-2">
+                Grid System
+              </h4>
+              <ul className="list-disc list-inside space-y-1">
+                <li>24×12 grid (1200×600 pixels)</li>
+                <li>50px per grid square</li>
+                <li>Diagonal movement allowed</li>
+                <li>Pathfinding avoids obstacles</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+      
   );
 };

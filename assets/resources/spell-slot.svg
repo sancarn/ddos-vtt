@@ -1,0 +1,43 @@
+<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="spellSlotGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="1"/>
+      <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#1D4ED8" stop-opacity="0.6"/>
+    </radialGradient>
+    <radialGradient id="squareGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#93C5FD" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0.8"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Enhanced outer glow using multiple blurred rectangles for stronger effect -->
+  <rect x="6" y="7" width="12" height="12" fill="url(#squareGlow)" filter="url(#outerGlow)" opacity="0.8"/>
+  <rect x="7" y="8" width="10" height="10" fill="url(#squareGlow)" filter="url(#outerGlow)" opacity="0.6"/>
+  
+  <!-- Main glowing square - properly centered -->
+  <rect x="8" y="9" width="8" height="8" fill="url(#squareGlow)" filter="url(#glow)" opacity="1"/>
+  
+  <!-- Main square with border - properly centered -->
+  <rect x="8.5" y="9.5" width="7" height="7" fill="url(#squareGlow)" stroke="#3B82F6" stroke-width="0.5"/>
+  
+  <defs>
+    <!-- Enhanced outer glow filter -->
+    <filter id="outerGlow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Enhanced main glow filter -->
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

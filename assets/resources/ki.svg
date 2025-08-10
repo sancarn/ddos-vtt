@@ -1,0 +1,11 @@
+<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="kiGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FB923C" stop-opacity="1"/>
+      <stop offset="70%" stop-color="#F97316" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#EA580C" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <path d="M12,2 Q14,6 16,8 Q18,10 16,14 Q14,18 12,20 Q10,18 8,14 Q6,10 8,8 Q10,6 12,2 Z" fill="url(#kiGlow)" stroke="#C2410C" stroke-width="1"/>
+  <path d="M12,4 Q13,7 14,9 Q15,11 14,13 Q13,15 12,17 Q11,15 10,13 Q9,11 10,9 Q11,7 12,4 Z" fill="#FB923C" opacity="0.3"/>
+</svg>

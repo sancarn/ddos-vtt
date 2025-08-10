@@ -24,6 +24,7 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
   const [slots, setSlots] = useState<SpellSlot[]>([]);
   const [draggedSpell, setDraggedSpell] = useState<Spell | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; slotId: string } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -125,11 +126,29 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
     setSlots(prev => prev.map(slot => 
       slot.id === slotId ? { ...slot, spell: null } : slot
     ));
+    setContextMenu(null);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, slotId: string) => {
+    e.preventDefault();
+    const slot = slots.find(s => s.id === slotId);
+    if (slot?.spell) {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        slotId
+      });
+    }
+  };
+
+  const handleClickOutside = () => {
+    setContextMenu(null);
   };
 
   return (
     <div 
       className={`spell-bar bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-game-gold rounded-xl p-4 shadow-2xl relative ${className}`}
+      onClick={handleClickOutside}
     >
       {/* Stone texture overlay for the entire bar */}
       <div
@@ -140,61 +159,40 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
       />
       
       {/* Spell Bar Grid */}
-      <div 
-        className={`spell-bar-container overflow-x-auto overflow-y-auto py-2 relative z-10 max-h-[90px]`}
-        ref={containerRef}
-      >
-        <div 
-          className="spell-bar-grid grid grid-cols-16 grid-rows-9 gap-1 w-max"
+              <div 
+          className="overflow-x-auto overflow-y-auto py-1 relative z-10 max-h-[100px]"
+          ref={containerRef}
         >
+          <div 
+            className="grid grid-cols-16 grid-rows-9 w-max"
+          >
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className={`spell-slot relative w-16 h-16 bg-transparent rounded border border-gray-600 cursor-pointer transition-all duration-200 overflow-hidden flex-shrink-0 ${
-                slot.spell ? 'border-green-500 shadow-lg shadow-green-500/30' : ''
-              } ${
+              className={`spell-slot relative w-8 h-8 bg-transparent rounded border border-gray-600 cursor-pointer transition-all duration-200 overflow-hidden flex-shrink-0 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-400/30 ${
                 dragOverSlot === slot.id ? 'border-game-gold scale-105 shadow-lg shadow-game-gold/30' : ''
               }`}
               onDragOver={(e) => handleDragOver(e, slot.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, slot.id)}
               onClick={() => handleSlotClick(slot)}
+              onContextMenu={(e) => handleContextMenu(e, slot.id)}
             >
               {slot.spell ? (
                 <div 
-                  className="spell-in-slot relative flex items-center justify-center h-full w-full cursor-grab"
+                  className="relative flex items-center justify-center h-full w-full cursor-grab"
                   draggable
                   onDragStart={(e) => handleDragStart(e, slot.spell!)}
                 >
                   <img 
                     src={slot.spell.icon} 
                     alt={slot.spell.name}
-                    className="spell-icon w-full h-full object-contain drop-shadow-lg"
+                    className="w-full h-full object-contain drop-shadow-lg"
                   />
-                  {slot.spell.currentCooldown && slot.spell.currentCooldown > 0 && (
-                    <div 
-                      className="cooldown-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded"
-                    >
-                      <span 
-                        className="cooldown-text text-red-500 text-sm font-bold drop-shadow-lg"
-                      >
-                        {slot.spell.currentCooldown}
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    className="remove-spell-btn absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/80 border-none rounded-full text-white text-xs font-bold cursor-pointer flex items-center justify-center opacity-0 transition-opacity duration-200 hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSpellFromSlot(slot.id);
-                    }}
-                  >
-                    ×
-                  </button>
                 </div>
               ) : (
                 <div 
-                  className="empty-slot flex w-full items-center justify-center h-full text-gray-400 text-xs text-center opacity-50"
+                  className="flex w-full items-center justify-center h-full text-gray-400 text-xs text-center opacity-50"
                 >
                   {/* <span className="slot-hint"></span> */}
                 </div>
@@ -203,6 +201,28 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
           ))}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl py-1 min-w-[120px]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors duration-200 flex items-center gap-2"
+            onClick={() => removeSpellFromSlot(contextMenu.slotId)}
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            Remove Spell
+          </button>
+        </div>
+      )}
     </div>
   );
 };
