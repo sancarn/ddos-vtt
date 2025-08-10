@@ -261,6 +261,28 @@ export const PlayerInterface: React.FC = () => {
   };
 
   // A* pathfinding algorithm
+  const findClosestReachablePosition = (start: GridPosition, target: GridPosition, maxDistance: number): GridPosition | null => {
+    // If target is already within range, return it
+    const directDistance = Math.max(Math.abs(target.x - start.x), Math.abs(target.y - start.y));
+    if (directDistance <= maxDistance) {
+      return target;
+    }
+
+    // Calculate the direction vector from start to target
+    const dx = target.x - start.x;
+    const dy = target.y - start.y;
+    
+    // Normalize the direction and scale to maxDistance
+    const distance = Math.max(Math.abs(dx), Math.abs(dy));
+    const scale = maxDistance / distance;
+    
+    // Calculate the closest reachable position
+    const reachableX = start.x + Math.round(dx * scale);
+    const reachableY = start.y + Math.round(dy * scale);
+    
+    return { x: reachableX, y: reachableY };
+  };
+
   const findPath = (start: GridPosition, end: GridPosition, maxDistance: number): GridPosition[] => {
     if (start.x === end.x && start.y === end.y) return [];
 
@@ -289,14 +311,14 @@ export const PlayerInterface: React.FC = () => {
 
       // Check all 8 adjacent cells (including diagonals)
       const directions = [
-        { dx: -1, dy: -1, cost: 1.4 }, // Diagonal
-        { dx: 0, dy: -1, cost: 1 },    // Up
-        { dx: 1, dy: -1, cost: 1.4 },  // Diagonal
-        { dx: -1, dy: 0, cost: 1 },    // Left
-        { dx: 1, dy: 0, cost: 1 },     // Right
-        { dx: -1, dy: 1, cost: 1.4 },  // Diagonal
-        { dx: 0, dy: 1, cost: 1 },     // Down
-        { dx: 1, dy: 1, cost: 1.4 },   // Diagonal
+        { dx: -1, dy: -1, cost: 1 }, // Diagonal
+        { dx: 0, dy: -1, cost: 1 },  // Up
+        { dx: 1, dy: -1, cost: 1 },  // Diagonal
+        { dx: -1, dy: 0, cost: 1 },  // Left
+        { dx: 1, dy: 0, cost: 1 },   // Right
+        { dx: -1, dy: 1, cost: 1 },  // Diagonal
+        { dx: 0, dy: 1, cost: 1 },   // Down
+        { dx: 1, dy: 1, cost: 1 },   // Diagonal
       ];
 
       for (const dir of directions) {
@@ -362,8 +384,17 @@ export const PlayerInterface: React.FC = () => {
       battlefieldRef.current!.getBoundingClientRect().top + blobPixelPos.y
     );
 
-    // Find path to hover position
-    const path = findPath(blobGridPos, gridPos, selectedBlobData.speed);
+    // First try to find path to exact cursor position
+    let path = findPath(blobGridPos, gridPos, selectedBlobData.speed);
+    
+    // If no path found (out of range), find closest reachable position
+    if (path.length === 0) {
+      const closestReachable = findClosestReachablePosition(blobGridPos, gridPos, selectedBlobData.speed);
+      if (closestReachable) {
+        path = findPath(blobGridPos, closestReachable, selectedBlobData.speed);
+      }
+    }
+    
     setHoverPath(path);
   };
 
@@ -379,7 +410,16 @@ export const PlayerInterface: React.FC = () => {
       battlefieldRef.current!.getBoundingClientRect().top + blobPixelPos.y
     );
 
-    const path = findPath(blobGridPos, gridPos, selectedBlobData.speed);
+    // First try to find path to exact cursor position
+    let path = findPath(blobGridPos, gridPos, selectedBlobData.speed);
+    
+    // If no path found (out of range), find closest reachable position
+    if (path.length === 0) {
+      const closestReachable = findClosestReachablePosition(blobGridPos, gridPos, selectedBlobData.speed);
+      if (closestReachable) {
+        path = findPath(blobGridPos, closestReachable, selectedBlobData.speed);
+      }
+    }
     
     if (path.length > 0) {
       // Move to the last position in the path
