@@ -203,18 +203,18 @@ export const PlayerInterface: React.FC = () => {
 
   const [blobs, setBlobs] = useState<Blob[]>([
     // P1's tokens (you control these)
-    { id: 'player1', x: 100, y: 100, isPlayer: true, health: 20, maxHealth: 20, color: '#4CAF50', speed: 6, controller: 'P1', name: 'Fighter' },
-    { id: 'player2', x: 150, y: 100, isPlayer: true, health: 18, maxHealth: 18, color: '#4CAF50', speed: 5, controller: 'P1', name: 'Ranger' },
+    { id: 'player1', x: 2 * 50 + 25, y: 2 * 50 + 25, isPlayer: true, health: 20, maxHealth: 20, color: '#4CAF50', speed: 6, controller: 'P1', name: 'Fighter' },
+    { id: 'player2', x: 3 * 50 + 25, y: 2 * 50 + 25, isPlayer: true, health: 18, maxHealth: 18, color: '#4CAF50', speed: 5, controller: 'P1', name: 'Ranger' },
     
     // P2's tokens (friend would control these)
-    { id: 'player3', x: 200, y: 100, isPlayer: true, health: 16, maxHealth: 16, color: '#2196F3', speed: 4, controller: 'P2', name: 'Wizard' },
-    { id: 'player4', x: 250, y: 100, isPlayer: true, health: 22, maxHealth: 22, color: '#2196F3', speed: 6, controller: 'P2', name: 'Cleric' },
+    { id: 'player3', x: 4 * 50 + 25, y: 2 * 50 + 25, isPlayer: true, health: 16, maxHealth: 16, color: '#2196F3', speed: 4, controller: 'P2', name: 'Wizard' },
+    { id: 'player4', x: 5 * 50 + 25, y: 2 * 50 + 25, isPlayer: true, health: 22, maxHealth: 22, color: '#2196F3', speed: 6, controller: 'P2', name: 'Cleric' },
     
     // Enemy tokens (no one controls these)
-    { id: 'enemy1', x: 300, y: 100, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Orc' },
-    { id: 'enemy2', x: 500, y: 100, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Goblin' },
-    { id: 'enemy3', x: 300, y: 300, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Troll' },
-    { id: 'enemy4', x: 500, y: 300, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Dragon' },
+    { id: 'enemy1', x: 6 * 50 + 25, y: 2 * 50 + 25, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Orc' },
+    { id: 'enemy2', x: 10 * 50 + 25, y: 2 * 50 + 25, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Goblin' },
+    { id: 'enemy3', x: 6 * 50 + 25, y: 6 * 50 + 25, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Troll' },
+    { id: 'enemy4', x: 10 * 50 + 25, y: 6 * 50 + 25, isPlayer: false, health: 15, maxHealth: 15, color: '#F44336', speed: 4, controller: 'DM', name: 'Dragon' },
   ]);
 
   const [selectedBlob, setSelectedBlob] = useState<string>('player1');
