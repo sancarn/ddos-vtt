@@ -223,6 +223,8 @@ export const Map: React.FC<MapProps> = ({
   const findPathAvoidingUnits = useCallback((start: GridPosition, goal: GridPosition, excludeBlobId?: string, options?: { allowEndOnOccupied?: boolean }): GridPosition[] => {
     const occupied = getOccupiedSet(excludeBlobId);
     const bounds = getSearchBounds();
+    // If the start and goal are perfectly aligned on X or Y, prefer a straight path with no diagonals
+    const alignedStraight = start.x === goal.x || start.y === goal.y;
 
     const key = (p: GridPosition) => `${p.x},${p.y}`;
     const inBounds = (p: GridPosition) => p.x >= bounds.minX && p.x <= bounds.maxX && p.y >= bounds.minY && p.y <= bounds.maxY;
@@ -239,7 +241,7 @@ export const Map: React.FC<MapProps> = ({
     type Node = { x: number; y: number; g: number; h: number; f: number; parent?: Node };
 
     const heuristic = (a: GridPosition, b: GridPosition) => {
-      // Chebyshev distance fits 8-direction unit-cost movement
+      // Chebyshev distance fits 8-direction unit-cost movement (still admissible with tiny diagonal bias below)
       const dx = Math.abs(a.x - b.x);
       const dy = Math.abs(a.y - b.y);
       return Math.max(dx, dy);
@@ -265,7 +267,8 @@ export const Map: React.FC<MapProps> = ({
     };
 
     const neighbors = (x: number, y: number): GridPosition[] => {
-      const result: GridPosition[] = [];
+      const cardinals: GridPosition[] = [];
+      const diagonals: GridPosition[] = [];
       for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
           if (dx === 0 && dy === 0) continue;
@@ -274,16 +277,20 @@ export const Map: React.FC<MapProps> = ({
           const np: GridPosition = { x: nx, y: ny };
           if (!inBounds(np)) continue;
           if (isBlocked(np)) continue;
+          const isDiag = dx !== 0 && dy !== 0;
+          // When aligned on X or Y with the goal, avoid diagonal exploration to keep the path straight
+          if (alignedStraight && isDiag) continue;
           // Prevent cutting corners on diagonals
-          if (dx !== 0 && dy !== 0) {
+          if (isDiag) {
             const n1: GridPosition = { x: x + dx, y };
             const n2: GridPosition = { x, y: y + dy };
             if (isBlocked(n1) || isBlocked(n2)) continue;
           }
-          result.push(np);
+          if (isDiag) diagonals.push(np); else cardinals.push(np);
         }
       }
-      return result;
+      // Explore cardinals first to bias straight paths when costs tie
+      return [...cardinals, ...diagonals];
     };
 
     while (open.length > 0) {
@@ -307,7 +314,9 @@ export const Map: React.FC<MapProps> = ({
         const nbKey = key(nb);
         if (closed.has(nbKey)) continue;
 
-        const tentativeG = current.g + 1; // unit cost
+        // Slightly de-prioritize diagonal moves to prefer straight paths when length is tied
+        const moveIsDiagonal = nb.x !== current.x && nb.y !== current.y;
+        const tentativeG = current.g + (moveIsDiagonal ? 1.0001 : 1);
         const existing = openSet.get(nbKey);
         if (!existing || tentativeG < existing.g) {
           const h = heuristic(nb, goal);
