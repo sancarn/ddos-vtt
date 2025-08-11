@@ -160,7 +160,7 @@ export const SpellBar: React.FC<SpellBarProps> = ({ className = '' }) => {
       
       {/* Spell Bar Grid */}
               <div 
-          className="overflow-x-auto overflow-y-auto py-1 relative z-10 max-h-[100px]"
+          className="overflow-x-hidden overflow-y-auto py-1 relative z-10 max-h-[100px]"
           ref={containerRef}
         >
           <div 

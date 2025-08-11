@@ -429,7 +429,7 @@ export const PlayerInterface: React.FC = () => {
         </div>
 
         {/* Skills List */}
-        <div className="flex flex-col gap-2 w-full p-4 max-h-96 overflow-y-auto">
+        <div className="flex flex-col gap-2 w-full p-4 max-h-96 overflow-y-auto overflow-x-hidden">
           {filteredSkills.map((skill) => (
             <Skill
               key={skill.name}

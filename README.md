@@ -12,6 +12,14 @@ This VTT is intended mainly as a Battleground and Resource management VTT. Curre
 
 ## Current status
 
+Still majorly in testing and developing the UI.
+
+Current focus is the Map component.
+
+Rules engine not yet started.
+
+Networking not yet started.
+
 ![current](./docs/current_status.png)
 
 ## Features
