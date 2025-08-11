@@ -474,9 +474,9 @@ export const PlayerInterface: React.FC = () => {
       </div>
 
       {/* Main Game Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Map */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4 min-h-0 overflow-hidden">
           <Map
             blobs={blobs}
             selectedBlob={selectedBlob}

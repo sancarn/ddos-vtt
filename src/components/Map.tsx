@@ -52,6 +52,7 @@ export const Map: React.FC<MapProps> = ({
   onMoveBlob
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mapTransform, setMapTransform] = useState({ offsetX: 0, offsetY: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const [lastPanPosition, setLastPanPosition] = useState({ x: 0, y: 0 });
@@ -136,8 +137,8 @@ export const Map: React.FC<MapProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
 
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
 
     // Calculate the world coordinates of the viewport corners
     const topLeft = {
@@ -164,8 +165,8 @@ export const Map: React.FC<MapProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = canvas.clientWidth / 2;
+    const centerY = canvas.clientHeight / 2;
     
     return screenToGrid(centerX, centerY);
   }, [screenToGrid]);
@@ -432,6 +433,39 @@ export const Map: React.FC<MapProps> = ({
     render();
   }, [render]);
 
+  // Keep canvas pixel size in sync with its displayed size
+  useEffect(() => {
+    const syncCanvasSize = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        render();
+      }
+    };
+
+    // Initial sync
+    syncCanvasSize();
+
+    // Resize observer to handle flex/layout changes
+    const ro = new ResizeObserver(() => syncCanvasSize());
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
+    }
+
+    // Window resize fallback
+    window.addEventListener('resize', syncCanvasSize);
+
+    return () => {
+      window.removeEventListener('resize', syncCanvasSize);
+      ro.disconnect();
+    };
+  }, [render]);
+
   // Global mouse up handler
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsPanning(false);
@@ -440,12 +474,10 @@ export const Map: React.FC<MapProps> = ({
   }, []);
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative w-full h-full">
       <canvas
         ref={canvasRef}
-        width={1200}
-        height={600}
-        className="w-[1200px] h-[600px] bg-game-gray border-2 border-gray-700 rounded-lg cursor-crosshair"
+        className="w-full h-full bg-game-gray border-2 border-gray-700 rounded-lg cursor-crosshair block"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
