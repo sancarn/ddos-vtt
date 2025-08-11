@@ -486,20 +486,56 @@ export const Map: React.FC<MapProps> = ({
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    // Check if click is on a blob
-    for (const blob of blobs) {
-      const blobScreenPos = gridToScreen(blob.x / GRID_SIZE, blob.y / GRID_SIZE);
-      const distance = Math.sqrt(
-        Math.pow(e.clientX - rect.left - blobScreenPos.x, 2) + 
-        Math.pow(e.clientY - rect.top - blobScreenPos.y, 2)
-      );
-      
-      if (distance <= 32) { // 32px radius for blob selection
-        onBlobSelect(blob.id);
+    // Convert mouse to world coordinates (pre-transform)
+    const mouseWorldX = (e.clientX - rect.left - mapTransform.offsetX) / mapTransform.scale;
+    const mouseWorldY = (e.clientY - rect.top - mapTransform.offsetY) / mapTransform.scale;
+
+    // Group blobs by grid cell
+    const cellKey = (gx: number, gy: number) => `${gx},${gy}`;
+    const groups = new globalThis.Map<string, { gridX: number; gridY: number; members: Blob[] }>();
+    for (const b of blobs) {
+      const gx = Math.floor(b.x / GRID_SIZE);
+      const gy = Math.floor(b.y / GRID_SIZE);
+      const key = cellKey(gx, gy);
+      if (!groups.has(key)) groups.set(key, { gridX: gx, gridY: gy, members: [] });
+      groups.get(key)!.members.push(b);
+    }
+
+    // Determine hit by reproducing the same layout used for rendering
+    const candidates: { blob: Blob; cx: number; cy: number; r: number }[] = [];
+    groups.forEach((group) => {
+      const { gridX, gridY, members } = group;
+      const center = { x: gridX * GRID_SIZE + GRID_SIZE / 2, y: gridY * GRID_SIZE + GRID_SIZE / 2 };
+      const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id));
+      const m = sorted.length;
+      if (m <= 1) {
+        candidates.push({ blob: sorted[0], cx: center.x, cy: center.y, r: 32 });
+        return;
+      }
+      const maxRing = (GRID_SIZE / 2) - 2; // padding from cell border
+      const angleStep = (Math.PI * 2) / m;
+      const s = Math.sin(Math.PI / m);
+      const ringRadius = maxRing / (1 + s);
+      const tokenRadius = maxRing - ringRadius;
+      for (let i = 0; i < m; i++) {
+        const angle = -Math.PI / 2 + i * angleStep; // start at top, clockwise
+        const cx = center.x + ringRadius * Math.cos(angle);
+        const cy = center.y + ringRadius * Math.sin(angle);
+        candidates.push({ blob: sorted[i], cx, cy, r: tokenRadius });
+      }
+    });
+
+    // Prefer the top-most (last drawn) match by checking in reverse order of candidates
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      const c = candidates[i];
+      const dx = mouseWorldX - c.cx;
+      const dy = mouseWorldY - c.cy;
+      if (dx * dx + dy * dy <= c.r * c.r) {
+        onBlobSelect(c.blob.id);
         return;
       }
     }
-  }, [blobs, gridToScreen, onBlobSelect]);
+  }, [blobs, onBlobSelect, mapTransform]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -615,54 +651,87 @@ export const Map: React.FC<MapProps> = ({
 
 
 
-    // Draw blobs
+    // Draw blobs with grouped lattice layout per occupied cell
     ctx.globalAlpha = 1;
-    for (const blob of blobs) {
-      // Convert blob's pixel coordinates to grid coordinates, then to world coordinates
-      const gridX = Math.floor(blob.x / GRID_SIZE);
-      const gridY = Math.floor(blob.y / GRID_SIZE);
-      const worldPos = gridToWorld(gridX, gridY);
-      
-      // Draw blob circle
-      ctx.fillStyle = blob.color;
-      ctx.strokeStyle = selectedBlob === blob.id ? '#FBBF24' : 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = selectedBlob === blob.id ? 3 : 2;
-      
-      ctx.beginPath();
-      ctx.arc(worldPos.x, worldPos.y, 32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Draw name initial
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.beginPath();
-      ctx.arc(worldPos.x + 16, worldPos.y - 16, 12, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(blob.name.charAt(0), worldPos.x + 16, worldPos.y - 16);
-
-      // Draw controller
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(worldPos.x - 16, worldPos.y + 16, 32, 16);
-      
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 10px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(blob.controller, worldPos.x, worldPos.y + 24);
-
-      // Draw health bar
-      const healthPercent = blob.health / blob.maxHealth;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(worldPos.x - 16, worldPos.y + 32, 32, 4);
-      
-      ctx.fillStyle = '#10B981';
-      ctx.fillRect(worldPos.x - 16, worldPos.y + 32, 32 * healthPercent, 4);
+    const cellKey = (gx: number, gy: number) => `${gx},${gy}`;
+    const groups = new globalThis.Map<string, { gridX: number; gridY: number; members: Blob[] }>();
+    for (const b of blobs) {
+      const gx = Math.floor(b.x / GRID_SIZE);
+      const gy = Math.floor(b.y / GRID_SIZE);
+      const key = cellKey(gx, gy);
+      if (!groups.has(key)) groups.set(key, { gridX: gx, gridY: gy, members: [] as Blob[] });
+      groups.get(key)!.members.push(b);
     }
+
+    groups.forEach((group) => {
+      const { gridX, gridY, members } = group;
+      const center = gridToWorld(gridX, gridY);
+      const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id));
+      const count = sorted.length;
+      if (count <= 1) {
+        const blob = sorted[0];
+        ctx.fillStyle = blob.color;
+        ctx.strokeStyle = selectedBlob === blob.id ? '#FBBF24' : 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = selectedBlob === blob.id ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Decorations for single token
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.beginPath();
+        ctx.arc(center.x + 16, center.y - 16, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(blob.name.charAt(0), center.x + 16, center.y - 16);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(center.x - 16, center.y + 16, 32, 16);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(blob.controller, center.x, center.y + 24);
+        const healthPercent = blob.health / blob.maxHealth;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(center.x - 16, center.y + 32, 32, 4);
+        ctx.fillStyle = '#10B981';
+        ctx.fillRect(center.x - 16, center.y + 32, 32 * healthPercent, 4);
+        return;
+      }
+
+      // Multi-token cell: arrange around a circle and scale radius
+      const maxRing = (GRID_SIZE / 2) - 2;
+      const angleStep = (Math.PI * 2) / count;
+      const s = Math.sin(Math.PI / count);
+      const ringRadius = maxRing / (1 + s);
+      const tokenRadius = maxRing - ringRadius;
+
+      for (let i = 0; i < count; i++) {
+        const blob = sorted[i];
+        const angle = -Math.PI / 2 + i * angleStep; // start at top
+        const cx = center.x + ringRadius * Math.cos(angle);
+        const cy = center.y + ringRadius * Math.sin(angle);
+
+        ctx.fillStyle = blob.color;
+        ctx.strokeStyle = selectedBlob === blob.id ? '#FBBF24' : 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = selectedBlob === blob.id ? 3 : Math.max(1, tokenRadius * 0.08);
+        ctx.beginPath();
+        ctx.arc(cx, cy, tokenRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Compact initial for identity
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${Math.max(8, Math.round(tokenRadius * 0.7))}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(blob.name.charAt(0), cx, cy);
+      }
+    });
 
     ctx.restore();
   }, [blobs, selectedBlob, hoverPath, mapTransform, gridToScreen, isTurn, movementPath, gridToWorld, characterData, canControlBlob, getVisibleGridRange]);

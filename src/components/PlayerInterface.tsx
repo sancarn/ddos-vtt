@@ -75,6 +75,10 @@ export const PlayerInterface: React.FC = () => {
     { id: '2', x: 200, y: 150, isPlayer: true, health: 20, maxHealth: 25, color: '#3B82F6', speed: 6, controller: 'P2', name: 'Wizard' },
     { id: '3', x: 300, y: 200, isPlayer: false, health: 15, maxHealth: 20, color: '#EF4444', speed: 4, controller: 'DM', name: 'Goblin' },
     { id: '4', x: 400, y: 250, isPlayer: false, health: 18, maxHealth: 22, color: '#EF4444', speed: 4, controller: 'DM', name: 'Orc' },
+    { id: '4', x: 400, y: 250, isPlayer: false, health: 18, maxHealth: 22, color: '#EF4444', speed: 4, controller: 'DM', name: 'Orc' },
+    { id: '4', x: 400, y: 250, isPlayer: false, health: 18, maxHealth: 22, color: '#EF4444', speed: 4, controller: 'DM', name: 'Orc' },
+    { id: '4', x: 400, y: 250, isPlayer: false, health: 18, maxHealth: 22, color: '#EF4444', speed: 4, controller: 'DM', name: 'Orc' },
+    { id: '4', x: 400, y: 250, isPlayer: false, health: 18, maxHealth: 22, color: '#EF4444', speed: 4, controller: 'DM', name: 'Orc' },
   ]);
 
   // Selected blob state
