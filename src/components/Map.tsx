@@ -230,7 +230,11 @@ export const Map: React.FC<MapProps> = ({
         return;
       }
     }
+  }, [blobs, gridToScreen, onBlobSelect]);
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    
     // Handle movement if it's the player's turn and they have a selected character
     if (isTurn && selectedBlob && characterData && onMoveBlob) {
       const selectedBlobData = blobs.find(b => b.id === selectedBlob);
@@ -256,14 +260,13 @@ export const Map: React.FC<MapProps> = ({
         }
         
         setMovementPath([]); // Clear the path after moving
+        return; // Don't call onRightClick if we handled movement
       }
     }
-  }, [blobs, mapTransform, gridToScreen, onBlobSelect, isTurn, selectedBlob, characterData, onMoveBlob, canControlBlob, worldToGrid, calculateMovementPath, screenToGrid]);
-
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+    
+    // Call the parent's right-click handler if we didn't handle movement
     onRightClick(e);
-  }, [onRightClick]);
+  }, [onRightClick, isTurn, selectedBlob, characterData, onMoveBlob, blobs, canControlBlob, screenToGrid, worldToGrid]);
 
   // Render everything to canvas
   const render = useCallback(() => {
