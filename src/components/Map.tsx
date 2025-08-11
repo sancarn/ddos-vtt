@@ -33,6 +33,7 @@ interface MapProps {
       setCurrent: (i: number) => void;
     };
     canMoveThroughUnits: boolean;
+    canOccupySameSpaceAsUnits: boolean;
   };
   isTurn?: boolean;
   onMoveBlob?: (blobId: string, newGridPos: GridPosition) => void;
@@ -120,16 +121,13 @@ export const Map: React.FC<MapProps> = ({
     const dy = end.y - start.y;
     const targetDistance = Math.sqrt(dx * dx + dy * dy);
 
-    // Limit how far we preview to the reachable distance
     const previewDistance = Math.min(maxDistance, targetDistance);
     if (previewDistance === 0) return [];
 
-    // Compute the actual endpoint we will preview to (either the target or the max reachable point)
     const previewRatio = targetDistance === 0 ? 0 : previewDistance / targetDistance;
     const previewEndX = start.x + dx * previewRatio;
     const previewEndY = start.y + dy * previewRatio;
 
-    // Number of dots: equal to speed when out of range, or fewer if target is closer
     const steps = Math.max(1, Math.floor(previewDistance));
 
     const path: GridPosition[] = [];
@@ -138,19 +136,14 @@ export const Map: React.FC<MapProps> = ({
       const stepX = Math.round(start.x + (previewEndX - start.x) * stepRatio);
       const stepY = Math.round(start.y + (previewEndY - start.y) * stepRatio);
       const stepPos = { x: stepX, y: stepY };
-      
-      // Skip this step if it's occupied by another entity
-      if (isPositionOccupied(stepPos, excludeBlobId)) {
-        break;
-      }
-      
+      if (isPositionOccupied(stepPos, excludeBlobId)) break;
       path.push(stepPos);
     }
 
     return path;
   }, [isPositionOccupied]);
 
-  // Calculate visible grid range based on current viewport
+  // Visible grid range based on current viewport
   const getVisibleGridRange = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
@@ -158,7 +151,6 @@ export const Map: React.FC<MapProps> = ({
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
 
-    // Calculate the world coordinates of the viewport corners
     const topLeft = {
       x: -mapTransform.offsetX / mapTransform.scale,
       y: -mapTransform.offsetY / mapTransform.scale
@@ -168,8 +160,7 @@ export const Map: React.FC<MapProps> = ({
       y: (canvasHeight - mapTransform.offsetY) / mapTransform.scale
     };
 
-    // Convert to grid coordinates with some padding
-    const padding = 2; // Extra grid cells to render beyond viewport
+    const padding = 2;
     const minX = Math.floor(topLeft.x / GRID_SIZE) - padding;
     const maxX = Math.ceil(bottomRight.x / GRID_SIZE) + padding;
     const minY = Math.floor(topLeft.y / GRID_SIZE) - padding;
@@ -177,6 +168,168 @@ export const Map: React.FC<MapProps> = ({
 
     return { minX, maxX, minY, maxY };
   }, [mapTransform]);
+
+  // Build a set of occupied grid cells for fast lookup
+  const getOccupiedSet = useCallback((excludeBlobId?: string): Set<string> => {
+    const set = new Set<string>();
+    for (const blob of blobs) {
+      if (excludeBlobId && blob.id === excludeBlobId) continue;
+      const gp = worldToGrid(blob.x, blob.y);
+      set.add(`${gp.x},${gp.y}`);
+    }
+    return set;
+  }, [blobs, worldToGrid]);
+
+  // Get current search bounds from the visible grid range
+  const getSearchBounds = useCallback(() => {
+    const { minX, maxX, minY, maxY } = getVisibleGridRange();
+    return { minX, maxX, minY, maxY };
+  }, [getVisibleGridRange]);
+
+  // A* pathfinding avoiding occupied cells. 8-directional, no corner cutting.
+  const findPathAvoidingUnits = useCallback((start: GridPosition, goal: GridPosition, excludeBlobId?: string): GridPosition[] => {
+    const occupied = getOccupiedSet(excludeBlobId);
+    const bounds = getSearchBounds();
+
+    const key = (p: GridPosition) => `${p.x},${p.y}`;
+    const inBounds = (p: GridPosition) => p.x >= bounds.minX && p.x <= bounds.maxX && p.y >= bounds.minY && p.y <= bounds.maxY;
+    const isBlocked = (p: GridPosition) => occupied.has(key(p));
+
+    // If goal is blocked, we will still search to it but likely won't reach; callers may clamp.
+
+    type Node = { x: number; y: number; g: number; h: number; f: number; parent?: Node };
+
+    const heuristic = (a: GridPosition, b: GridPosition) => {
+      // Chebyshev distance fits 8-direction unit-cost movement
+      const dx = Math.abs(a.x - b.x);
+      const dy = Math.abs(a.y - b.y);
+      return Math.max(dx, dy);
+    };
+
+    const startNode: Node = { x: start.x, y: start.y, g: 0, h: heuristic(start, goal), f: 0 };
+    startNode.f = startNode.g + startNode.h;
+
+    const open: Node[] = [startNode];
+    const openSet = new globalThis.Map<string, Node>([[key(start), startNode]]);
+    const closed = new Set<string>();
+
+    const reconstructPath = (node: Node): GridPosition[] => {
+      const rev: GridPosition[] = [];
+      let cur: Node | undefined = node;
+      while (cur) {
+        rev.push({ x: cur.x, y: cur.y });
+        cur = cur.parent;
+      }
+      rev.reverse();
+      // Exclude the start cell to match existing path semantics
+      return rev.slice(1);
+    };
+
+    const neighbors = (x: number, y: number): GridPosition[] => {
+      const result: GridPosition[] = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          const np: GridPosition = { x: nx, y: ny };
+          if (!inBounds(np)) continue;
+          if (isBlocked(np)) continue;
+          // Prevent cutting corners on diagonals
+          if (dx !== 0 && dy !== 0) {
+            const n1: GridPosition = { x: x + dx, y };
+            const n2: GridPosition = { x, y: y + dy };
+            if (isBlocked(n1) || isBlocked(n2)) continue;
+          }
+          result.push(np);
+        }
+      }
+      return result;
+    };
+
+    while (open.length > 0) {
+      // Pick node with lowest f (simple linear search is fine for small open sets)
+      let bestIdx = 0;
+      for (let i = 1; i < open.length; i++) {
+        if (open[i].f < open[bestIdx].f) bestIdx = i;
+      }
+      const current = open.splice(bestIdx, 1)[0];
+      openSet.delete(key({ x: current.x, y: current.y }));
+
+      const curKey = key({ x: current.x, y: current.y });
+      if (closed.has(curKey)) continue;
+      closed.add(curKey);
+
+      if (current.x === goal.x && current.y === goal.y) {
+        return reconstructPath(current);
+      }
+
+      for (const nb of neighbors(current.x, current.y)) {
+        const nbKey = key(nb);
+        if (closed.has(nbKey)) continue;
+
+        const tentativeG = current.g + 1; // unit cost
+        const existing = openSet.get(nbKey);
+        if (!existing || tentativeG < existing.g) {
+          const h = heuristic(nb, goal);
+          const node: Node = {
+            x: nb.x,
+            y: nb.y,
+            g: tentativeG,
+            h,
+            f: tentativeG + h,
+            parent: current
+          };
+          open.push(node);
+          openSet.set(nbKey, node);
+        }
+      }
+    }
+
+    // No path found
+    return [];
+  }, [getOccupiedSet, getSearchBounds]);
+
+  // Compute a path considering canMoveThroughUnits and clamp to maxDistance
+  const computeMovementPreviewPath = useCallback((start: GridPosition, desiredEnd: GridPosition, maxDistance: number, excludeBlobId?: string, canMoveThroughUnitsFlag?: boolean): GridPosition[] => {
+    if (maxDistance <= 0) return [];
+    const canGhost = !!canMoveThroughUnitsFlag;
+    if (canGhost) {
+      return calculateMovementPath(start, desiredEnd, maxDistance, excludeBlobId);
+    }
+
+    // Avoid units: pathfind to target (or closest free cell) and clamp
+    const targetIsBlocked = isPositionOccupied(desiredEnd, excludeBlobId);
+    let goal = desiredEnd;
+    if (targetIsBlocked) {
+      // If target is blocked, prefer staying at current cell if adjacent and blocked everywhere
+      // Try ring search up to radius = maxDistance to find closest unoccupied cell near the desired end
+      const bounds = getSearchBounds();
+      let found: GridPosition | null = null;
+      outer: for (let r = 1; r <= Math.max(1, Math.floor(maxDistance)); r++) {
+        for (let dx = -r; dx <= r; dx++) {
+          for (let dy = -r; dy <= r; dy++) {
+            const cand: GridPosition = { x: desiredEnd.x + dx, y: desiredEnd.y + dy };
+            const inDiamond = Math.max(Math.abs(dx), Math.abs(dy)) === r; // only ring
+            if (!inDiamond) continue;
+            if (cand.x < bounds.minX || cand.x > bounds.maxX || cand.y < bounds.minY || cand.y > bounds.maxY) continue;
+            if (isPositionOccupied(cand, excludeBlobId)) continue;
+            found = cand;
+            break outer;
+          }
+        }
+      }
+      if (found) goal = found;
+    }
+
+    const fullPath = findPathAvoidingUnits(start, goal, excludeBlobId);
+    if (fullPath.length === 0) return [];
+    return fullPath.slice(0, Math.max(0, Math.floor(maxDistance)));
+  }, [calculateMovementPath, isPositionOccupied, getSearchBounds, findPathAvoidingUnits]);
+
+  // NOTE: duplicate left intentionally removed above
+
+  // (removed duplicate getVisibleGridRange definition)
 
   // Get the center grid position of the current viewport
   const getCenterGridPosition = useCallback(() => {
@@ -223,7 +376,7 @@ export const Map: React.FC<MapProps> = ({
       if (selectedBlobData && canControlBlob(selectedBlobData)) {
         const startPos = worldToGrid(selectedBlobData.x, selectedBlobData.y);
         const maxDistance = characterData.speed.getCurrent();
-        const path = calculateMovementPath(startPos, gridPos, maxDistance, selectedBlob);
+        const path = computeMovementPreviewPath(startPos, gridPos, maxDistance, selectedBlob, characterData.canMoveThroughUnits);
         
         // Debug logging
         console.log('Movement path calculation:', {
@@ -299,42 +452,40 @@ export const Map: React.FC<MapProps> = ({
         const startPos = worldToGrid(selectedBlobData.x, selectedBlobData.y);
         const maxDistance = characterData.speed.getCurrent();
         
-        // Calculate the actual distance to the target
-        const dx = targetGridPos.x - startPos.x;
-        const dy = targetGridPos.y - startPos.y;
-        const targetDistance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (targetDistance <= maxDistance) {
-          // Check if the target position is occupied
-          if (isPositionOccupied(targetGridPos, selectedBlob)) {
-            // Target is occupied, find the closest unoccupied position along the path
-            const path = calculateMovementPath(startPos, targetGridPos, maxDistance, selectedBlob);
-            if (path.length > 0) {
-              // Move to the last valid position in the path
-              onMoveBlob(selectedBlob, path[path.length - 1]);
+        if (characterData.canMoveThroughUnits) {
+          // Legacy straight-line behavior
+          const dx = targetGridPos.x - startPos.x;
+          const dy = targetGridPos.y - startPos.y;
+          const targetDistance = Math.sqrt(dx * dx + dy * dy);
+          if (targetDistance <= maxDistance) {
+            if (isPositionOccupied(targetGridPos, selectedBlob)) {
+              const path = calculateMovementPath(startPos, targetGridPos, maxDistance, selectedBlob);
+              if (path.length > 0) {
+                onMoveBlob(selectedBlob, path[path.length - 1]);
+              }
+            } else {
+              onMoveBlob(selectedBlob, targetGridPos);
             }
           } else {
-            // Target is free - move there
-            onMoveBlob(selectedBlob, targetGridPos);
+            const ratio = maxDistance / targetDistance;
+            const maxX = Math.round(startPos.x + dx * ratio);
+            const maxY = Math.round(startPos.y + dy * ratio);
+            const maxPos = { x: maxX, y: maxY };
+            if (isPositionOccupied(maxPos, selectedBlob)) {
+              const path = calculateMovementPath(startPos, maxPos, maxDistance, selectedBlob);
+              if (path.length > 0) {
+                onMoveBlob(selectedBlob, path[path.length - 1]);
+              }
+            } else {
+              onMoveBlob(selectedBlob, maxPos);
+            }
           }
         } else {
-          // Can't reach the target - move as far as possible
-          const ratio = maxDistance / targetDistance;
-          const maxX = Math.round(startPos.x + dx * ratio);
-          const maxY = Math.round(startPos.y + dy * ratio);
-          const maxPos = { x: maxX, y: maxY };
-          
-          // Check if the max position is occupied
-          if (isPositionOccupied(maxPos, selectedBlob)) {
-            // Max position is occupied, find the closest unoccupied position along the path
-            const path = calculateMovementPath(startPos, maxPos, maxDistance, selectedBlob);
-            if (path.length > 0) {
-              // Move to the last valid position in the path
-              onMoveBlob(selectedBlob, path[path.length - 1]);
-            }
-          } else {
-            // Max position is free - move there
-            onMoveBlob(selectedBlob, maxPos);
+          // Obstacle-aware pathing
+          const previewPath = computeMovementPreviewPath(startPos, targetGridPos, maxDistance, selectedBlob, false);
+          if (previewPath.length > 0) {
+            const finalStep = previewPath[Math.min(previewPath.length, Math.max(1, Math.floor(maxDistance))) - 1];
+            onMoveBlob(selectedBlob, finalStep);
           }
         }
         
