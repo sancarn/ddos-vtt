@@ -532,15 +532,6 @@ export const PlayerInterface: React.FC = () => {
                 <div className="h-full bg-red-500 transition-all duration-300" style={{ width: '75%' }}></div>
               </div>
             </div>
-            
-            <div>
-              <h4 className="text-game-gold font-semibold mb-1">
-                Resources
-              </h4>
-              <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: '60%' }}></div>
-              </div>
-            </div>
           </div>
           
           {/* Resources and Spell Bar Container */}
