@@ -227,3 +227,18 @@ Generate dots between start and this clamped endpoint
 Steps equal floor(reachableDistance) so when out of range, dots count ≈ speed; if closer, fewer dots
 Removed the extra append of the actual target so dots no longer extend past the reachable position.
 You still can click far away; movement on click remains unchanged and will move to the max reachable grid cell if the target is out of range.
+
+----
+
+# 2025-08-11 - Things missing from Map
+
+1. Undo movement
+2. Spell casting
+   - Shape/Zonal
+   - Targeted with range
+   - Many targets
+3. Ground conditions/Surfaces - e.g. difficult terrain
+4. BUG: When another character is selected yellow dots stay - these should disappear.
+
+
+  
