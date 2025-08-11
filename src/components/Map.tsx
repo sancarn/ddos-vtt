@@ -32,6 +32,7 @@ interface MapProps {
       getCurrent: () => number;
       setCurrent: (i: number) => void;
     };
+    canMoveThroughUnits: boolean;
   };
   isTurn?: boolean;
   onMoveBlob?: (blobId: string, newGridPos: GridPosition) => void;
