@@ -58,6 +58,7 @@ export const Map: React.FC<MapProps> = ({
   const [lastPanPosition, setLastPanPosition] = useState({ x: 0, y: 0 });
   const [mouseGridPosition, setMouseGridPosition] = useState<GridPosition | null>(null);
   const [movementPath, setMovementPath] = useState<GridPosition[]>([]);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   // Convert screen coordinates to grid coordinates
   const screenToGrid = useCallback((screenX: number, screenY: number): GridPosition => {
@@ -473,6 +474,20 @@ export const Map: React.FC<MapProps> = ({
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+D to toggle debug info
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDebugInfo(prev => !prev);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div ref={containerRef} className="relative w-full h-full">
       <canvas
@@ -488,40 +503,43 @@ export const Map: React.FC<MapProps> = ({
       
 
       {/* Debug Info Overlay */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="bg-black/90 border border-game-gold rounded-lg p-4 text-xs text-gray-300 max-w-xs backdrop-blur-sm">
-          <h4 className="text-game-gold font-semibold mb-2">Debug Information</h4>
-          <p><strong>Selected:</strong> {blobs.find(b => b.id === selectedBlob)?.name || 'None'}</p>
-          <p><strong>Controller:</strong> {blobs.find(b => b.id === selectedBlob)?.controller || 'None'}</p>
-          <p><strong>Can Control:</strong> {blobs.find(b => b.id === selectedBlob) && canControlBlob(blobs.find(b => b.id === selectedBlob)!) ? 'Yes' : 'No'}</p>
-          <p><strong>Speed:</strong> {blobs.find(b => b.id === selectedBlob)?.speed || 0}</p>
-          <p><strong>Character Speed:</strong> {characterData?.speed.getCurrent() || 'N/A'}</p>
-          <p><strong>Path Length:</strong> {hoverPath.length}</p>
-          <p><strong>Movement Path:</strong> {movementPath.length} steps</p>
-          <p><strong>Mouse Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
-          <p><strong>Is Turn:</strong> {isTurn ? 'Yes' : 'No'}</p>
-          <p><strong>Grid Range:</strong> {(() => {
-            const range = getVisibleGridRange();
-            return `X: ${range.minX} to ${range.maxX}, Y: ${range.minY} to ${range.maxY}`;
-          })()}</p>
-          <p><strong>Center Grid:</strong> {(() => {
-            const center = getCenterGridPosition();
-            return `${center.x}, ${center.y}`;
-          })()}</p>
-          <p className="mb-1"><strong>Zoom:</strong> {Math.round(mapTransform.scale * 100)}%</p>
-          <p className="mb-1"><strong>Pan:</strong> Middle-click + drag</p>
-          <p className="mb-2"><strong>Zoom:</strong> Mouse wheel</p>
-          <p className="mb-1"><strong>Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
-          <p className="mb-1"><strong>World:</strong> {mouseGridPosition ? `${mouseGridPosition.x * GRID_SIZE}, ${mouseGridPosition.y * GRID_SIZE}` : 'None'}</p>
-          <p className="mb-1"><strong>Center:</strong> {(() => {
-            const center = getCenterGridPosition();
-            return `${center.x}, ${center.y}`;
-          })()}</p>
-          <p><strong>My Tokens:</strong> {blobs.filter(b => b.controller === 'P1').map(b => b.name).join(', ')}</p>
-          <p><strong>Other Player:</strong> {blobs.filter(b => b.controller === 'P2').map(b => b.name).join(', ')}</p>
-          <p><strong>Enemies:</strong> {blobs.filter(b => b.controller === 'DM').map(b => b.name).join(', ')}</p>
+      {showDebugInfo && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="bg-black/90 border border-game-gold rounded-lg p-4 text-xs text-gray-300 max-w-xs backdrop-blur-sm">
+            <h4 className="text-game-gold font-semibold mb-2">Debug Information</h4>
+            <p><strong>Selected:</strong> {blobs.find(b => b.id === selectedBlob)?.name || 'None'}</p>
+            <p><strong>Controller:</strong> {blobs.find(b => b.id === selectedBlob)?.controller || 'None'}</p>
+            <p><strong>Can Control:</strong> {blobs.find(b => b.id === selectedBlob) && canControlBlob(blobs.find(b => b.id === selectedBlob)!) ? 'Yes' : 'No'}</p>
+            <p><strong>Speed:</strong> {blobs.find(b => b.id === selectedBlob)?.speed || 0}</p>
+            <p><strong>Character Speed:</strong> {characterData?.speed.getCurrent() || 'N/A'}</p>
+            <p><strong>Path Length:</strong> {hoverPath.length}</p>
+            <p><strong>Movement Path:</strong> {movementPath.length} steps</p>
+            <p><strong>Mouse Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
+            <p><strong>Is Turn:</strong> {isTurn ? 'Yes' : 'No'}</p>
+            <p><strong>Grid Range:</strong> {(() => {
+              const range = getVisibleGridRange();
+              return `X: ${range.minX} to ${range.maxX}, Y: ${range.minY} to ${range.maxY}`;
+            })()}</p>
+            <p><strong>Center Grid:</strong> {(() => {
+              const center = getCenterGridPosition();
+              return `${center.x}, ${center.y}`;
+            })()}</p>
+            <p className="mb-1"><strong>Zoom:</strong> {Math.round(mapTransform.scale * 100)}%</p>
+            <p className="mb-1"><strong>Pan:</strong> Middle-click + drag</p>
+            <p className="mb-2"><strong>Zoom:</strong> Mouse wheel</p>
+            <p className="mb-1"><strong>Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
+            <p className="mb-1"><strong>World:</strong> {mouseGridPosition ? `${mouseGridPosition.x * GRID_SIZE}, ${mouseGridPosition.y * GRID_SIZE}` : 'None'}</p>
+            <p className="mb-1"><strong>Center:</strong> {(() => {
+              const center = getCenterGridPosition();
+              return `${center.x}, ${center.y}`;
+            })()}</p>
+            <p><strong>My Tokens:</strong> {blobs.filter(b => b.controller === 'P1').map(b => b.name).join(', ')}</p>
+            <p><strong>Other Player:</strong> {blobs.filter(b => b.controller === 'P2').map(b => b.name).join(', ')}</p>
+            <p><strong>Enemies:</strong> {blobs.filter(b => b.controller === 'DM').map(b => b.name).join(', ')}</p>
+            <p className="text-game-gold text-xs mt-2">Press Ctrl+Shift+D to toggle</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
