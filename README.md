@@ -164,3 +164,66 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Inspired by Baldur's Gate 3's UI design
 - Built with React, TypeScript, PixiJS, and PeerJS
 - Special thanks to the D&D community for feedback and testing
+
+## Map detail
+
+Glaringly the characters have no movement controls! reminder, the movement controls should be grid based, moving up/down/left/right/diagnoally 1 square to the left should take 1 "speed". I imagine we will give the map component the character data
+
+```ts
+type characterData = {
+  speed: {
+    getCurrent: () => number
+    setCurrent: (i: number) => void
+  }
+}
+type isTurn = true | false //whether it's the current player's turn and thus whether movement controls etc. should be displayed
+
+<Map character={myCharacterData} isTurn={myTurn}>
+```
+
+
+Existing problem: Grid is finite
+
+Wait... I need to stop you there, the movement design is entirely wrong... With the character selected, I need you to detect the position of the mouse, and draw a movement line to the cursor (which follows the grid). The line should be indicated by yellow dots in the grid squares, each yellow dot representing 1 space of movement. Also, I want this to work even if the mouse is clicking too far away. Obviously the character only moves as far as he can possibly move, as also shown by the yellow dotted line. Does that make sense? I don't want a seperate movement window with buttons for all the directions!
+
+-----------
+
+The movement system currently for the @Map.tsx  and @PlayerInterface.tsx is messed up. We need to fix this. With the character selected, I need you to detect the position of the mouse, and draw a movement line to the cursor (which follows the grid). The line should be indicated by yellow dots in the grid squares, each yellow dot representing 1 space of movement. Also, I want this to work even if the mouse is clicking too far away. Obviously the character only moves as far as he can possibly move, as also shown by the yellow dotted line. Does that make sense? I don't want a seperate movement window with buttons for all the directions!
+
+It is important to note that the map control should look something like this:
+
+```ts
+type characterData = {
+  speed: {
+    getCurrent: () => number
+    setCurrent: (i: number) => void
+  }
+}
+type isTurn = true | false //whether it's the current player's turn and thus whether movement controls etc. should be displayed
+
+<Map character={myCharacterData} isTurn={myTurn}>
+```
+when it is finally in use.
+
+-----
+
+I have a problem with the movement system as it currently stands in @Map.tsx. Currently the yellow dots render all the way to the mouse cursor. This should not be the case. Instead yellow dots should render up until the last speed number is used up and no more. I.E.
+
+numberOfYellowDots = characterData.speed.getCurrent()
+distanceFromToken = numberOfYellowDots
+
+Note: I still want to be able to click far away and have the character move, and where the player moves to is perfectly fine. I just want the last yellow dot to be where the player will end up. Does that make sense?
+
+---
+
+I just updated the movement preview so the yellow dots stop exactly at the reachable endpoint (clamped by speed), and the count equals the speed (or fewer if the target is closer). I'll run a quick lint check on the modified file.
+
+What was wrong
+The preview path used a step count based on the target distance and sometimes appended the target, which made dots extend to the cursor.
+What I changed
+The path now clamps to the reachable endpoint and generates dots only up to that point:
+Compute the clamped endpoint at distance min(speed, distanceToTarget)
+Generate dots between start and this clamped endpoint
+Steps equal floor(reachableDistance) so when out of range, dots count ≈ speed; if closer, fewer dots
+Removed the extra append of the actual target so dots no longer extend past the reachable position.
+You still can click far away; movement on click remains unchanged and will move to the max reachable grid cell if the target is out of range.
