@@ -38,8 +38,6 @@ interface MapProps {
 }
 
 const GRID_SIZE = 50;
-const GRID_WIDTH = 24;
-const GRID_HEIGHT = 12;
 
 export const Map: React.FC<MapProps> = ({
   blobs,
@@ -132,6 +130,45 @@ export const Map: React.FC<MapProps> = ({
 
     return path;
   }, []);
+
+  // Calculate visible grid range based on current viewport
+  const getVisibleGridRange = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    // Calculate the world coordinates of the viewport corners
+    const topLeft = {
+      x: -mapTransform.offsetX / mapTransform.scale,
+      y: -mapTransform.offsetY / mapTransform.scale
+    };
+    const bottomRight = {
+      x: (canvasWidth - mapTransform.offsetX) / mapTransform.scale,
+      y: (canvasHeight - mapTransform.offsetY) / mapTransform.scale
+    };
+
+    // Convert to grid coordinates with some padding
+    const padding = 2; // Extra grid cells to render beyond viewport
+    const minX = Math.floor(topLeft.x / GRID_SIZE) - padding;
+    const maxX = Math.ceil(bottomRight.x / GRID_SIZE) + padding;
+    const minY = Math.floor(topLeft.y / GRID_SIZE) - padding;
+    const maxY = Math.ceil(bottomRight.y / GRID_SIZE) + padding;
+
+    return { minX, maxX, minY, maxY };
+  }, [mapTransform]);
+
+  // Get the center grid position of the current viewport
+  const getCenterGridPosition = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    return screenToGrid(centerX, centerY);
+  }, [screenToGrid]);
 
   // Handle mouse events
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -286,20 +323,22 @@ export const Map: React.FC<MapProps> = ({
 
     // Draw grid
     ctx.strokeStyle = '#A08A6E';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = Math.max(0.5, 1 / mapTransform.scale);
     ctx.globalAlpha = 0.3;
 
-    for (let x = 0; x <= GRID_WIDTH; x++) {
+    const { minX, maxX, minY, maxY } = getVisibleGridRange();
+
+    for (let x = minX; x <= maxX; x++) {
       ctx.beginPath();
-      ctx.moveTo(x * GRID_SIZE, 0);
-      ctx.lineTo(x * GRID_SIZE, GRID_HEIGHT * GRID_SIZE);
+      ctx.moveTo(x * GRID_SIZE, minY * GRID_SIZE);
+      ctx.lineTo(x * GRID_SIZE, maxY * GRID_SIZE);
       ctx.stroke();
     }
 
-    for (let y = 0; y <= GRID_HEIGHT; y++) {
+    for (let y = minY; y <= maxY; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * GRID_SIZE);
-      ctx.lineTo(GRID_WIDTH * GRID_SIZE, y * GRID_SIZE);
+      ctx.moveTo(minX * GRID_SIZE, y * GRID_SIZE);
+      ctx.lineTo(maxX * GRID_SIZE, y * GRID_SIZE);
       ctx.stroke();
     }
 
@@ -386,7 +425,7 @@ export const Map: React.FC<MapProps> = ({
     }
 
     ctx.restore();
-  }, [blobs, selectedBlob, hoverPath, mapTransform, gridToScreen, isTurn, movementPath, gridToWorld, characterData, canControlBlob]);
+  }, [blobs, selectedBlob, hoverPath, mapTransform, gridToScreen, isTurn, movementPath, gridToWorld, characterData, canControlBlob, getVisibleGridRange]);
 
   // Render on changes
   useEffect(() => {
@@ -415,21 +454,6 @@ export const Map: React.FC<MapProps> = ({
         onContextMenu={handleContextMenu}
       />
       
-      {/* Pan and Zoom Info */}
-      <div className="absolute top-4 left-4 z-10">
-        <div className="bg-black/90 border border-game-gold rounded-lg p-3 text-xs text-gray-300 backdrop-blur-sm">
-          <h4 className="text-game-gold font-semibold mb-2 text-center">Map Controls</h4>
-          <p className="mb-1"><strong>Zoom:</strong> {Math.round(mapTransform.scale * 100)}%</p>
-          <p className="mb-1"><strong>Pan:</strong> Middle-click + drag</p>
-          <p className="mb-2"><strong>Zoom:</strong> Mouse wheel</p>
-          <button 
-            onClick={() => setMapTransform({ offsetX: 0, offsetY: 0, scale: 1 })}
-            className="w-full px-2 py-1 bg-game-gold/20 border border-game-gold rounded text-game-gold text-xs hover:bg-game-gold/30 transition-colors"
-          >
-            Reset View
-          </button>
-        </div>
-      </div>
 
       {/* Debug Info Overlay */}
       <div className="absolute top-4 right-4 z-10">
@@ -444,6 +468,23 @@ export const Map: React.FC<MapProps> = ({
           <p><strong>Movement Path:</strong> {movementPath.length} steps</p>
           <p><strong>Mouse Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
           <p><strong>Is Turn:</strong> {isTurn ? 'Yes' : 'No'}</p>
+          <p><strong>Grid Range:</strong> {(() => {
+            const range = getVisibleGridRange();
+            return `X: ${range.minX} to ${range.maxX}, Y: ${range.minY} to ${range.maxY}`;
+          })()}</p>
+          <p><strong>Center Grid:</strong> {(() => {
+            const center = getCenterGridPosition();
+            return `${center.x}, ${center.y}`;
+          })()}</p>
+          <p className="mb-1"><strong>Zoom:</strong> {Math.round(mapTransform.scale * 100)}%</p>
+          <p className="mb-1"><strong>Pan:</strong> Middle-click + drag</p>
+          <p className="mb-2"><strong>Zoom:</strong> Mouse wheel</p>
+          <p className="mb-1"><strong>Grid:</strong> {mouseGridPosition ? `${mouseGridPosition.x}, ${mouseGridPosition.y}` : 'None'}</p>
+          <p className="mb-1"><strong>World:</strong> {mouseGridPosition ? `${mouseGridPosition.x * GRID_SIZE}, ${mouseGridPosition.y * GRID_SIZE}` : 'None'}</p>
+          <p className="mb-1"><strong>Center:</strong> {(() => {
+            const center = getCenterGridPosition();
+            return `${center.x}, ${center.y}`;
+          })()}</p>
           <p><strong>My Tokens:</strong> {blobs.filter(b => b.controller === 'P1').map(b => b.name).join(', ')}</p>
           <p><strong>Other Player:</strong> {blobs.filter(b => b.controller === 'P2').map(b => b.name).join(', ')}</p>
           <p><strong>Enemies:</strong> {blobs.filter(b => b.controller === 'DM').map(b => b.name).join(', ')}</p>
