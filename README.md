@@ -10,6 +10,10 @@ Including a custom scripting system, for characters. The battle engine has speci
 
 This VTT is intended mainly as a Battleground and Resource management VTT. Currently exploration gameplay is not planned.
 
+## Current status
+
+![current](./docs/current_status.png)
+
 ## Features
 
 - **Modern Dark UI**: Beautiful dark-themed interface inspired by Baldur's Gate 3
