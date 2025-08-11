@@ -102,8 +102,17 @@ export const Map: React.FC<MapProps> = ({
     };
   }, []);
 
+  // Check if a grid position is occupied by another entity
+  const isPositionOccupied = useCallback((gridPos: GridPosition, excludeBlobId?: string): boolean => {
+    return blobs.some(blob => {
+      if (excludeBlobId && blob.id === excludeBlobId) return false;
+      const blobGridPos = worldToGrid(blob.x, blob.y);
+      return blobGridPos.x === gridPos.x && blobGridPos.y === gridPos.y;
+    });
+  }, [blobs, worldToGrid]);
+
   // Calculate movement path, clamped to speed, with last dot at the reachable endpoint
-  const calculateMovementPath = useCallback((start: GridPosition, end: GridPosition, maxDistance: number): GridPosition[] => {
+  const calculateMovementPath = useCallback((start: GridPosition, end: GridPosition, maxDistance: number, excludeBlobId?: string): GridPosition[] => {
     if (maxDistance <= 0) return [];
 
     const dx = end.x - start.x;
@@ -127,11 +136,18 @@ export const Map: React.FC<MapProps> = ({
       const stepRatio = i / steps;
       const stepX = Math.round(start.x + (previewEndX - start.x) * stepRatio);
       const stepY = Math.round(start.y + (previewEndY - start.y) * stepRatio);
-      path.push({ x: stepX, y: stepY });
+      const stepPos = { x: stepX, y: stepY };
+      
+      // Skip this step if it's occupied by another entity
+      if (isPositionOccupied(stepPos, excludeBlobId)) {
+        break;
+      }
+      
+      path.push(stepPos);
     }
 
     return path;
-  }, []);
+  }, [isPositionOccupied]);
 
   // Calculate visible grid range based on current viewport
   const getVisibleGridRange = useCallback(() => {
@@ -206,7 +222,7 @@ export const Map: React.FC<MapProps> = ({
       if (selectedBlobData && canControlBlob(selectedBlobData)) {
         const startPos = worldToGrid(selectedBlobData.x, selectedBlobData.y);
         const maxDistance = characterData.speed.getCurrent();
-        const path = calculateMovementPath(startPos, gridPos, maxDistance);
+        const path = calculateMovementPath(startPos, gridPos, maxDistance, selectedBlob);
         
         // Debug logging
         console.log('Movement path calculation:', {
@@ -288,14 +304,37 @@ export const Map: React.FC<MapProps> = ({
         const targetDistance = Math.sqrt(dx * dx + dy * dy);
         
         if (targetDistance <= maxDistance) {
-          // Can reach the target - move there
-          onMoveBlob(selectedBlob, targetGridPos);
+          // Check if the target position is occupied
+          if (isPositionOccupied(targetGridPos, selectedBlob)) {
+            // Target is occupied, find the closest unoccupied position along the path
+            const path = calculateMovementPath(startPos, targetGridPos, maxDistance, selectedBlob);
+            if (path.length > 0) {
+              // Move to the last valid position in the path
+              onMoveBlob(selectedBlob, path[path.length - 1]);
+            }
+          } else {
+            // Target is free - move there
+            onMoveBlob(selectedBlob, targetGridPos);
+          }
         } else {
           // Can't reach the target - move as far as possible
           const ratio = maxDistance / targetDistance;
           const maxX = Math.round(startPos.x + dx * ratio);
           const maxY = Math.round(startPos.y + dy * ratio);
-          onMoveBlob(selectedBlob, { x: maxX, y: maxY });
+          const maxPos = { x: maxX, y: maxY };
+          
+          // Check if the max position is occupied
+          if (isPositionOccupied(maxPos, selectedBlob)) {
+            // Max position is occupied, find the closest unoccupied position along the path
+            const path = calculateMovementPath(startPos, maxPos, maxDistance, selectedBlob);
+            if (path.length > 0) {
+              // Move to the last valid position in the path
+              onMoveBlob(selectedBlob, path[path.length - 1]);
+            }
+          } else {
+            // Max position is free - move there
+            onMoveBlob(selectedBlob, maxPos);
+          }
         }
         
         setMovementPath([]); // Clear the path after moving
@@ -305,7 +344,7 @@ export const Map: React.FC<MapProps> = ({
     
     // Call the parent's right-click handler if we didn't handle movement
     onRightClick(e);
-  }, [onRightClick, isTurn, selectedBlob, characterData, onMoveBlob, blobs, canControlBlob, screenToGrid, worldToGrid]);
+  }, [onRightClick, isTurn, selectedBlob, characterData, onMoveBlob, blobs, canControlBlob, screenToGrid, worldToGrid, isPositionOccupied, calculateMovementPath]);
 
   // Render everything to canvas
   const render = useCallback(() => {
