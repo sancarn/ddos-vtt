@@ -63,7 +63,7 @@ export const PlayerInterface: React.FC = () => {
       setCurrent: (speed: number) => setCharacterSpeed(Math.max(0, speed))
     },
     canMoveThroughUnits: true,
-    canOccupySameSpaceAsUnits: false
+    canOccupySameSpaceAsUnits: true
   };
   
   // Turn state (in real app, this would come from game logic)

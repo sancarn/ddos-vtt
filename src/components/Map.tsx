@@ -113,35 +113,68 @@ export const Map: React.FC<MapProps> = ({
     });
   }, [blobs, worldToGrid]);
 
-  // Calculate movement path, clamped to speed, with last dot at the reachable endpoint
-  const calculateMovementPath = useCallback((start: GridPosition, end: GridPosition, maxDistance: number, excludeBlobId?: string): GridPosition[] => {
-    if (maxDistance <= 0) return [];
+  // Calculate straight-line movement path, clamped to speed.
+  // Supports passing through units and optionally ending on an occupied tile.
+  const calculateMovementPath = useCallback(
+    (
+      start: GridPosition,
+      end: GridPosition,
+      maxDistance: number,
+      options?: {
+        excludeBlobId?: string;
+        canMoveThroughUnits?: boolean;
+        canOccupySameSpaceAsUnits?: boolean;
+      }
+    ): GridPosition[] => {
+      if (maxDistance <= 0) return [];
 
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const targetDistance = Math.sqrt(dx * dx + dy * dy);
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const targetDistance = Math.sqrt(dx * dx + dy * dy);
 
-    const previewDistance = Math.min(maxDistance, targetDistance);
-    if (previewDistance === 0) return [];
+      const previewDistance = Math.min(maxDistance, targetDistance);
+      if (previewDistance === 0) return [];
 
-    const previewRatio = targetDistance === 0 ? 0 : previewDistance / targetDistance;
-    const previewEndX = start.x + dx * previewRatio;
-    const previewEndY = start.y + dy * previewRatio;
+      const previewRatio = targetDistance === 0 ? 0 : previewDistance / targetDistance;
+      const previewEndX = start.x + dx * previewRatio;
+      const previewEndY = start.y + dy * previewRatio;
 
-    const steps = Math.max(1, Math.floor(previewDistance));
+      const steps = Math.max(1, Math.floor(previewDistance));
 
-    const path: GridPosition[] = [];
-    for (let i = 1; i <= steps; i++) {
-      const stepRatio = i / steps;
-      const stepX = Math.round(start.x + (previewEndX - start.x) * stepRatio);
-      const stepY = Math.round(start.y + (previewEndY - start.y) * stepRatio);
-      const stepPos = { x: stepX, y: stepY };
-      if (isPositionOccupied(stepPos, excludeBlobId)) break;
-      path.push(stepPos);
-    }
+      const path: GridPosition[] = [];
+      for (let i = 1; i <= steps; i++) {
+        const stepRatio = i / steps;
+        const stepX = Math.round(start.x + (previewEndX - start.x) * stepRatio);
+        const stepY = Math.round(start.y + (previewEndY - start.y) * stepRatio);
+        const stepPos = { x: stepX, y: stepY };
 
-    return path;
-  }, [isPositionOccupied]);
+        const occupied = isPositionOccupied(stepPos, options?.excludeBlobId);
+        const isFinalStep = i === steps;
+
+        if (occupied) {
+          // If we can't pass through units, stop before the occupied cell
+          if (!options?.canMoveThroughUnits) break;
+
+          // We can pass through units. For the final step, only include it if we're allowed to end on occupied
+          if (isFinalStep) {
+            if (options?.canOccupySameSpaceAsUnits) {
+              path.push(stepPos);
+            }
+            // If we can't end on occupied, do not push final occupied cell
+          } else {
+            // Intermediate occupied cell but canMoveThroughUnits: include the step and continue
+            path.push(stepPos);
+          }
+        } else {
+          // Unoccupied cell: always include
+          path.push(stepPos);
+        }
+      }
+
+      return path;
+    },
+    [isPositionOccupied]
+  );
 
   // Visible grid range based on current viewport
   const getVisibleGridRange = useCallback(() => {
@@ -187,13 +220,19 @@ export const Map: React.FC<MapProps> = ({
   }, [getVisibleGridRange]);
 
   // A* pathfinding avoiding occupied cells. 8-directional, no corner cutting.
-  const findPathAvoidingUnits = useCallback((start: GridPosition, goal: GridPosition, excludeBlobId?: string): GridPosition[] => {
+  const findPathAvoidingUnits = useCallback((start: GridPosition, goal: GridPosition, excludeBlobId?: string, options?: { allowEndOnOccupied?: boolean }): GridPosition[] => {
     const occupied = getOccupiedSet(excludeBlobId);
     const bounds = getSearchBounds();
 
     const key = (p: GridPosition) => `${p.x},${p.y}`;
     const inBounds = (p: GridPosition) => p.x >= bounds.minX && p.x <= bounds.maxX && p.y >= bounds.minY && p.y <= bounds.maxY;
-    const isBlocked = (p: GridPosition) => occupied.has(key(p));
+    const isBlocked = (p: GridPosition) => {
+      const blocked = occupied.has(key(p));
+      if (!blocked) return false;
+      // Allow stepping into goal even if occupied when enabled
+      if (options?.allowEndOnOccupied && p.x === goal.x && p.y === goal.y) return false;
+      return true;
+    };
 
     // If goal is blocked, we will still search to it but likely won't reach; callers may clamp.
 
@@ -290,42 +329,59 @@ export const Map: React.FC<MapProps> = ({
     return [];
   }, [getOccupiedSet, getSearchBounds]);
 
-  // Compute a path considering canMoveThroughUnits and clamp to maxDistance
-  const computeMovementPreviewPath = useCallback((start: GridPosition, desiredEnd: GridPosition, maxDistance: number, excludeBlobId?: string, canMoveThroughUnitsFlag?: boolean): GridPosition[] => {
-    if (maxDistance <= 0) return [];
-    const canGhost = !!canMoveThroughUnitsFlag;
-    if (canGhost) {
-      return calculateMovementPath(start, desiredEnd, maxDistance, excludeBlobId);
-    }
+  // Compute a path considering canMoveThroughUnits and canOccupySameSpaceAsUnits, clamped to maxDistance
+  const computeMovementPreviewPath = useCallback(
+    (
+      start: GridPosition,
+      desiredEnd: GridPosition,
+      maxDistance: number,
+      options?: {
+        excludeBlobId?: string;
+        canMoveThroughUnits?: boolean;
+        canOccupySameSpaceAsUnits?: boolean;
+      }
+    ): GridPosition[] => {
+      if (maxDistance <= 0) return [];
+      const canGhost = !!options?.canMoveThroughUnits;
+      const canShare = !!options?.canOccupySameSpaceAsUnits;
 
-    // Avoid units: pathfind to target (or closest free cell) and clamp
-    const targetIsBlocked = isPositionOccupied(desiredEnd, excludeBlobId);
-    let goal = desiredEnd;
-    if (targetIsBlocked) {
-      // If target is blocked, prefer staying at current cell if adjacent and blocked everywhere
-      // Try ring search up to radius = maxDistance to find closest unoccupied cell near the desired end
-      const bounds = getSearchBounds();
-      let found: GridPosition | null = null;
-      outer: for (let r = 1; r <= Math.max(1, Math.floor(maxDistance)); r++) {
-        for (let dx = -r; dx <= r; dx++) {
-          for (let dy = -r; dy <= r; dy++) {
-            const cand: GridPosition = { x: desiredEnd.x + dx, y: desiredEnd.y + dy };
-            const inDiamond = Math.max(Math.abs(dx), Math.abs(dy)) === r; // only ring
-            if (!inDiamond) continue;
-            if (cand.x < bounds.minX || cand.x > bounds.maxX || cand.y < bounds.minY || cand.y > bounds.maxY) continue;
-            if (isPositionOccupied(cand, excludeBlobId)) continue;
-            found = cand;
-            break outer;
+      if (canGhost) {
+        return calculateMovementPath(start, desiredEnd, maxDistance, {
+          excludeBlobId: options?.excludeBlobId,
+          canMoveThroughUnits: true,
+          canOccupySameSpaceAsUnits: canShare
+        });
+      }
+
+      // Avoid units: pathfind to target (or closest free cell if cannot share) and clamp
+      const targetIsBlocked = !canShare && isPositionOccupied(desiredEnd, options?.excludeBlobId);
+      let goal = desiredEnd;
+      if (targetIsBlocked) {
+        // Try ring search up to radius = maxDistance to find closest unoccupied cell near the desired end
+        const bounds = getSearchBounds();
+        let found: GridPosition | null = null;
+        outer: for (let r = 1; r <= Math.max(1, Math.floor(maxDistance)); r++) {
+          for (let dx = -r; dx <= r; dx++) {
+            for (let dy = -r; dy <= r; dy++) {
+              const cand: GridPosition = { x: desiredEnd.x + dx, y: desiredEnd.y + dy };
+              const inDiamond = Math.max(Math.abs(dx), Math.abs(dy)) === r; // only ring
+              if (!inDiamond) continue;
+              if (cand.x < bounds.minX || cand.x > bounds.maxX || cand.y < bounds.minY || cand.y > bounds.maxY) continue;
+              if (isPositionOccupied(cand, options?.excludeBlobId)) continue;
+              found = cand;
+              break outer;
+            }
           }
         }
+        if (found) goal = found;
       }
-      if (found) goal = found;
-    }
 
-    const fullPath = findPathAvoidingUnits(start, goal, excludeBlobId);
-    if (fullPath.length === 0) return [];
-    return fullPath.slice(0, Math.max(0, Math.floor(maxDistance)));
-  }, [calculateMovementPath, isPositionOccupied, getSearchBounds, findPathAvoidingUnits]);
+      const fullPath = findPathAvoidingUnits(start, goal, options?.excludeBlobId, { allowEndOnOccupied: canShare });
+      if (fullPath.length === 0) return [];
+      return fullPath.slice(0, Math.max(0, Math.floor(maxDistance)));
+    },
+    [calculateMovementPath, isPositionOccupied, getSearchBounds, findPathAvoidingUnits]
+  );
 
   // NOTE: duplicate left intentionally removed above
 
@@ -376,7 +432,11 @@ export const Map: React.FC<MapProps> = ({
       if (selectedBlobData && canControlBlob(selectedBlobData)) {
         const startPos = worldToGrid(selectedBlobData.x, selectedBlobData.y);
         const maxDistance = characterData.speed.getCurrent();
-        const path = computeMovementPreviewPath(startPos, gridPos, maxDistance, selectedBlob, characterData.canMoveThroughUnits);
+        const path = computeMovementPreviewPath(startPos, gridPos, maxDistance, {
+          excludeBlobId: selectedBlob,
+          canMoveThroughUnits: characterData.canMoveThroughUnits,
+          canOccupySameSpaceAsUnits: characterData.canOccupySameSpaceAsUnits
+        });
         
         // Debug logging
         console.log('Movement path calculation:', {
@@ -393,7 +453,7 @@ export const Map: React.FC<MapProps> = ({
 
     // Call the parent's mouse move handler
     onMouseMove(e);
-  }, [isPanning, lastPanPosition, onMouseMove, screenToGrid, isTurn, selectedBlob, characterData, blobs, canControlBlob, worldToGrid, calculateMovementPath]);
+  }, [isPanning, lastPanPosition, onMouseMove, screenToGrid, isTurn, selectedBlob, characterData, blobs, canControlBlob, worldToGrid, computeMovementPreviewPath]);
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
@@ -452,37 +512,24 @@ export const Map: React.FC<MapProps> = ({
         const startPos = worldToGrid(selectedBlobData.x, selectedBlobData.y);
         const maxDistance = characterData.speed.getCurrent();
         
+        // Unified movement handling
         if (characterData.canMoveThroughUnits) {
-          // Legacy straight-line behavior
-          const dx = targetGridPos.x - startPos.x;
-          const dy = targetGridPos.y - startPos.y;
-          const targetDistance = Math.sqrt(dx * dx + dy * dy);
-          if (targetDistance <= maxDistance) {
-            if (isPositionOccupied(targetGridPos, selectedBlob)) {
-              const path = calculateMovementPath(startPos, targetGridPos, maxDistance, selectedBlob);
-              if (path.length > 0) {
-                onMoveBlob(selectedBlob, path[path.length - 1]);
-              }
-            } else {
-              onMoveBlob(selectedBlob, targetGridPos);
-            }
-          } else {
-            const ratio = maxDistance / targetDistance;
-            const maxX = Math.round(startPos.x + dx * ratio);
-            const maxY = Math.round(startPos.y + dy * ratio);
-            const maxPos = { x: maxX, y: maxY };
-            if (isPositionOccupied(maxPos, selectedBlob)) {
-              const path = calculateMovementPath(startPos, maxPos, maxDistance, selectedBlob);
-              if (path.length > 0) {
-                onMoveBlob(selectedBlob, path[path.length - 1]);
-              }
-            } else {
-              onMoveBlob(selectedBlob, maxPos);
-            }
+          const path = calculateMovementPath(startPos, targetGridPos, maxDistance, {
+            excludeBlobId: selectedBlob,
+            canMoveThroughUnits: true,
+            canOccupySameSpaceAsUnits: characterData.canOccupySameSpaceAsUnits
+          });
+          if (path.length > 0) {
+            const finalStep = path[path.length - 1];
+            onMoveBlob(selectedBlob, finalStep);
           }
         } else {
-          // Obstacle-aware pathing
-          const previewPath = computeMovementPreviewPath(startPos, targetGridPos, maxDistance, selectedBlob, false);
+          // Obstacle-aware pathing respecting canOccupySameSpaceAsUnits for landing
+          const previewPath = computeMovementPreviewPath(startPos, targetGridPos, maxDistance, {
+            excludeBlobId: selectedBlob,
+            canMoveThroughUnits: false,
+            canOccupySameSpaceAsUnits: characterData.canOccupySameSpaceAsUnits
+          });
           if (previewPath.length > 0) {
             const finalStep = previewPath[Math.min(previewPath.length, Math.max(1, Math.floor(maxDistance))) - 1];
             onMoveBlob(selectedBlob, finalStep);
@@ -496,7 +543,7 @@ export const Map: React.FC<MapProps> = ({
     
     // Call the parent's right-click handler if we didn't handle movement
     onRightClick(e);
-  }, [onRightClick, isTurn, selectedBlob, characterData, onMoveBlob, blobs, canControlBlob, screenToGrid, worldToGrid, isPositionOccupied, calculateMovementPath]);
+  }, [onRightClick, isTurn, selectedBlob, characterData, onMoveBlob, blobs, canControlBlob, screenToGrid, worldToGrid, calculateMovementPath, computeMovementPreviewPath]);
 
   // Render everything to canvas
   const render = useCallback(() => {
