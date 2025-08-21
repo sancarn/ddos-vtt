@@ -42,22 +42,26 @@ Networking not yet started.
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/ddos-vtt.git
 cd ddos-vtt
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 ```
 
 4. **Important**: For networking features to work, you also need to start the PeerJS server in a separate terminal:
+
 ```bash
 npm install -g peer
 peer --port 9000
@@ -74,10 +78,12 @@ peer --port 9000
 ### Common Issues
 
 1. **PixiJS Errors**: If you see `TypeError: PIXI.Sprite.from is not a constructor`, try:
+
    - Restart the development server: `npm run dev`
    - Clear browser cache and refresh the page
 
 2. **PeerJS Connection Errors**: If you see `ERR_CONNECTION_REFUSED` for PeerJS:
+
    - Make sure the PeerJS server is running: `peer --port 9000`
    - Check that port 9000 is not being used by another application
 
@@ -90,6 +96,7 @@ peer --port 9000
 ### Player Interface (`/`)
 
 The main player interface includes:
+
 - **Character Sheet**: View and manage character attributes, skills, and status effects
 - **Battle Map**: Interactive map with character tokens and lighting
 - **Inventory**: Manage character inventory and items
@@ -98,6 +105,7 @@ The main player interface includes:
 ### DM Interface (`/dm`)
 
 The DM interface provides additional controls:
+
 - **Character Management**: Add/remove NPCs and manage all characters
 - **Fog of War**: Control visibility and lighting
 - **Player Management**: Manage connected players
@@ -106,6 +114,7 @@ The DM interface provides additional controls:
 ### Networking
 
 The VTT uses PeerJS for peer-to-peer networking:
+
 - Each player gets a unique Peer ID
 - Players can connect to each other using these IDs
 - All game state is synchronized in real-time
@@ -193,14 +202,13 @@ type isTurn = true | false //whether it's the current player's turn and thus whe
 <Map character={myCharacterData} isTurn={myTurn}>
 ```
 
-
 Existing problem: Grid is finite
 
 Wait... I need to stop you there, the movement design is entirely wrong... With the character selected, I need you to detect the position of the mouse, and draw a movement line to the cursor (which follows the grid). The line should be indicated by yellow dots in the grid squares, each yellow dot representing 1 space of movement. Also, I want this to work even if the mouse is clicking too far away. Obviously the character only moves as far as he can possibly move, as also shown by the yellow dotted line. Does that make sense? I don't want a seperate movement window with buttons for all the directions!
 
------------
+---
 
-The movement system currently for the @Map.tsx  and @PlayerInterface.tsx is messed up. We need to fix this. With the character selected, I need you to detect the position of the mouse, and draw a movement line to the cursor (which follows the grid). The line should be indicated by yellow dots in the grid squares, each yellow dot representing 1 space of movement. Also, I want this to work even if the mouse is clicking too far away. Obviously the character only moves as far as he can possibly move, as also shown by the yellow dotted line. Does that make sense? I don't want a seperate movement window with buttons for all the directions!
+The movement system currently for the @Map.tsx and @PlayerInterface.tsx is messed up. We need to fix this. With the character selected, I need you to detect the position of the mouse, and draw a movement line to the cursor (which follows the grid). The line should be indicated by yellow dots in the grid squares, each yellow dot representing 1 space of movement. Also, I want this to work even if the mouse is clicking too far away. Obviously the character only moves as far as he can possibly move, as also shown by the yellow dotted line. Does that make sense? I don't want a seperate movement window with buttons for all the directions!
 
 It is important to note that the map control should look something like this:
 
@@ -215,9 +223,10 @@ type isTurn = true | false //whether it's the current player's turn and thus whe
 
 <Map character={myCharacterData} isTurn={myTurn}>
 ```
+
 when it is finally in use.
 
------
+---
 
 I have a problem with the movement system as it currently stands in @Map.tsx. Currently the yellow dots render all the way to the mouse cursor. This should not be the case. Instead yellow dots should render up until the last speed number is used up and no more. I.E.
 
@@ -240,7 +249,7 @@ Steps equal floor(reachableDistance) so when out of range, dots count ≈ speed;
 Removed the extra append of the actual target so dots no longer extend past the reachable position.
 You still can click far away; movement on click remains unchanged and will move to the max reachable grid cell if the target is out of range.
 
-----
+---
 
 # 2025-08-11 - Things missing from Map
 
@@ -252,5 +261,7 @@ You still can click far away; movement on click remains unchanged and will move 
 3. Ground conditions/Surfaces - e.g. difficult terrain
 4. BUG: When another character is selected yellow dots stay - these should disappear.
 
+---
 
-  
+https://github.com/boardgameio
+https://github.com/boardgameio/p2p
